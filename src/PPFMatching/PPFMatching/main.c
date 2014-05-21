@@ -31,7 +31,6 @@ void compute_ppf_features(const double p1[4], const double n1[4],
 	double delta[4] = {p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2], 0};
 	double f1,f2,f3,f4;
 
-	// f4 = ||delta||
 	f[3] = sqrt(delta[0]*delta[0]+delta[1]*delta[1]+delta[2]*delta[2]);
 
 	if (f[3])
@@ -41,13 +40,12 @@ void compute_ppf_features(const double p1[4], const double n1[4],
 		delta[2] /= f[3];
 	}
 
-	// f1 = n1 dot delta
 	f[0] = n1[0] * delta[0] + n1[1] * delta[1] + n1[2] * delta[2];
-	// f2 = n2 dot delta
 	f[1] = n2[0] * delta[0] + n2[1] * delta[1] + n2[2] * delta[2];
-	// f3 = n1 dot n2
 	f[2] = n1[0] * n2[0] + n1[1] * n2[1] + n1[2] * n2[2];
 }
+
+void 
 
  int compare(const void* arg, const void* obj)
  {
