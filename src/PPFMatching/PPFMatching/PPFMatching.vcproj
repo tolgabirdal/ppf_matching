@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="./includes"
+				AdditionalIncludeDirectories="C:\Users\tolga\Documents\GitHub\opencv\modules\contrib\include;C:\Users\tolga\Documents\GitHub\opencv\modules\imgproc\include;C:\Users\tolga\Documents\GitHub\opencv\modules\core\include;C:\Users\tolga\Documents\GitHub\opencv\modules\highgui\include;C:\Users\tolga\Documents\GitHub\opencv\modules\nonfree\include;C:\Users\tolga\Documents\GitHub\opencv\modules\features2d\include;C:\Users\tolga\Documents\GitHub\opencv\modules\flann\include;./includes;C:\Users\tolga\Documents\GitHub\opencv\modules\calib3d\include;C:\Users\tolga\Documents\GitHub\opencv_contrib\modules\rgbd\include;C:\Users\tolga\Dropbox\Projects\eigen;C:\Users\tolga\Documents\GitHub\opencv\modules\viz\include;C:\Users\tolga\Documents\GitHub\ppf_matching\src\PPFMatching\PPFMatching\visualizations\vtk"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -61,8 +61,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="tommyhash.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib tommyhash.lib opencv_core300d.lib opencv_imgproc300d.lib opencv_highgui300d.lib opencv_nonfree300d.lib opencv_features2d300d.lib opencv_calib3d300d.lib opencv_contrib300d.lib"
 				LinkIncremental="2"
+				AdditionalLibraryDirectories="C:\Users\tolga\Documents\GitHub\opencv\bin\lib\Debug;./libs"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -116,6 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="C:\Users\tolga\Documents\GitHub\opencv\modules\contrib\include;C:\Users\tolga\Documents\GitHub\opencv\modules\imgproc\include;C:\Users\tolga\Documents\GitHub\opencv\modules\core\include;C:\Users\tolga\Documents\GitHub\opencv\modules\highgui\include;C:\Users\tolga\Documents\GitHub\opencv\modules\nonfree\include;C:\Users\tolga\Documents\GitHub\opencv\modules\features2d\include;C:\Users\tolga\Documents\GitHub\opencv\modules\flann\include;./includes;C:\Users\tolga\Documents\GitHub\opencv\modules\calib3d\include;C:\Users\tolga\Documents\GitHub\opencv_contrib\modules\rgbd\include;C:\Users\tolga\Dropbox\Projects\eigen;C:\Users\tolga\Documents\GitHub\opencv\modules\viz\include;C:\Users\tolga\Documents\GitHub\ppf_matching\src\PPFMatching\PPFMatching\visualizations\vtk"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -134,7 +136,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="opengl32.lib glu32.lib tommyhash.lib opencv_core300.lib opencv_imgproc300.lib opencv_highgui300.lib opencv_nonfree300.lib opencv_features2d300.lib opencv_calib3d300.lib opencv_contrib300.lib"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="C:\Users\tolga\Documents\GitHub\opencv\bin\lib\Release;./libs"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -173,11 +177,31 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\main.c"
+				RelativePath=".\c_utils.c"
 				>
 			</File>
 			<File
-				RelativePath=".\utils.c"
+				RelativePath=".\depth_to_3d.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\helpers.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\main.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\normal.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\utils.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\WindowGL.c"
 				>
 			</File>
 		</Filter>
@@ -187,7 +211,31 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\c_utils.h"
+				>
+			</File>
+			<File
+				RelativePath=".\depth_to_3d.h"
+				>
+			</File>
+			<File
+				RelativePath=".\hash_murmur.h"
+				>
+			</File>
+			<File
+				RelativePath=".\helpers.h"
+				>
+			</File>
+			<File
+				RelativePath=".\TRgbGL.h"
+				>
+			</File>
+			<File
 				RelativePath=".\utils.h"
+				>
+			</File>
+			<File
+				RelativePath=".\WindowGL.h"
 				>
 			</File>
 		</Filter>
