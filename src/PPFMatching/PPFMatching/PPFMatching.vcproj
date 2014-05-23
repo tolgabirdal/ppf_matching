@@ -185,6 +185,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\gdiam.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\helpers.cpp"
 				>
 			</File>
@@ -216,6 +220,10 @@
 			</File>
 			<File
 				RelativePath=".\depth_to_3d.h"
+				>
+			</File>
+			<File
+				RelativePath=".\gdiam.hpp"
 				>
 			</File>
 			<File

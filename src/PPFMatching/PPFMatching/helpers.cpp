@@ -1,7 +1,9 @@
 
 #include "WindowGL.h"
 #include "helpers.h"
+#include "gdiam.hpp"
 #include <iostream>
+#include <time.h>
 #include <fstream>
 
 using namespace std;
@@ -245,4 +247,28 @@ Mat sample_pc_random(Mat PC, int numPoints)
 	delete[] (randInd);
 
 	return sampledPC;
+}
+
+void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2])
+{
+	Mat pcPts = pc.colRange(0, 3);
+	int num = pcPts.rows;
+
+	float* points = (float*)pcPts.data;
+    GPointPair   pair;
+
+    //printf( "Axis parallel bounding box\n" );
+    GBBox   bbx;
+    bbx.init();
+    for  ( int  ind = 0; ind < num; ind++ )
+        bbx.bound( (float*)(pcPts.data + (ind * pcPts.step)) );
+    //bbx.dump();
+
+	xRange[0]=bbx.min_coord(0);
+	yRange[0]=bbx.min_coord(1);
+	zRange[0]=bbx.min_coord(2);
+
+	xRange[1]=bbx.max_coord(0);
+	yRange[1]=bbx.max_coord(1);
+	zRange[1]=bbx.max_coord(2);
 }

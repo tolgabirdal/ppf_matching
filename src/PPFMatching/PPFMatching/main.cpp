@@ -79,8 +79,10 @@ int hash_ppf(const double f[4], const double AngleStep, const double DistanceSte
 }
 
 
-int t_create_match_model_pc(const Mat PC, const double AngleStep, const double DistanceStep, TPPFModelPC** Model3D)
+int t_create_match_model_pc(const Mat PC, const double RelSamplingStep, const double RelativeAngleStep, const double RelativeDistanceStep, TPPFModelPC** Model3D)
 {
+
+
 	return 0;
 }
 
@@ -89,10 +91,27 @@ int compare(const void* arg, const void* obj)
 	return *(const int*)arg != ((THash*)obj)->id;
 }
 
+// test bounding box
+int main()
+{
+	int useNormals = 1;
+	int numVert = 6700;
+	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
+	Mat pc = load_ply_simple(fn, numVert, useNormals);
+
+	TPPFModelPC* Model3D = 0;
+
+	float xRange[2], yRange[2], zRange[2];
+	compute_obb(pc, xRange, yRange, zRange);
+	
+
+//	t_create_match_model_pc(pc, const double AngleStep, const double DistanceStep, &Model3D);
+
+}
 
 // test point cloud reading & visualization
 // for now uniform sampling looks better
-int main()
+int main_ply()
 {
 	int useNormals = 1;
 	int numVert = 6700;
@@ -106,6 +125,7 @@ int main()
 	visualize_pc(spc1, useNormals, "Uniform Sampled");
 	visualize_pc(spc2, useNormals, "Random Sampled");
 
+	return 0;
 }
     
 // test hash table

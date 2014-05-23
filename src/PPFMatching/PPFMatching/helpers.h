@@ -16,6 +16,8 @@ extern "C" {
 	Mat sample_pc_uniform(Mat PC, int sampleStep);
 	Mat sample_pc_random(Mat PC, int numPoints);
 
+	void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2]);
+
 #if defined (__cplusplus)
 }
 #endif
