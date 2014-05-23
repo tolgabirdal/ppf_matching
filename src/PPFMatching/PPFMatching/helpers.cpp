@@ -98,9 +98,9 @@ typedef struct
 	int withNormals;
 }TWindowData;
 
-static float light_diffuse[] = {100, 0, 100, 100.0f}; 
+static float light_diffuse[] = {100, 100, 100, 100.0f}; 
 static float light_position[] = {-100.0, 100.0, 1.0, 0.0};
-static float amb[] =  {0.4, 0.4, 0.4, 0.0};
+static float amb[] =  {0.24, 0.24, 0.24, 0.0};
 static float dif[] =  {1.0, 1.0, 1.0, 0.0};
 
 int display(void* UserData)
@@ -178,10 +178,10 @@ int display(void* UserData)
 }
 
 
-void* visualize_pc(Mat pc, int withNormals)
+void* visualize_pc(Mat pc, int withNormals, char* Title)
 {
 	TWindowGL* window=(TWindowGL*)calloc(1, sizeof(TWindowGL));
-	int status=CreateGLWindow(window, "Point Cloud", 300, 300, 512, 512, 24);
+	int status=CreateGLWindow(window, Title, 300, 300, 512, 512, 24);
 
 	MoveGLWindow(window, 300, 300);
 	update_window(window);
@@ -198,4 +198,51 @@ void* visualize_pc(Mat pc, int withNormals)
 	wait_window(window);
 
 	return (void*)window;
+}
+
+Mat sample_pc_uniform(Mat PC, int sampleStep)
+{
+	int numRows = PC.rows/sampleStep;
+	Mat sampledPC = Mat(numRows, PC.cols, PC.type());
+
+	int c=0;
+	for (int i=0; i<PC.rows && c<numRows; i+=sampleStep)
+	{
+		PC.row(i).copyTo(sampledPC.row(c++));
+	}
+
+	return sampledPC;
+}
+
+void shuffle(int *array, size_t n)
+{
+	size_t i;
+	for (i = 0; i < n - 1; i++) 
+	{
+		size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+		int t = array[j];
+		array[j] = array[i];
+		array[i] = t;
+	}
+}
+
+Mat sample_pc_random(Mat PC, int numPoints)
+{
+	Mat sampledPC = Mat(numPoints, PC.cols, PC.type());
+
+	// This is a slight inefficient way of doing it. Will optimize in final version.
+	srand(time(0));
+	int* randInd = new int[PC.rows];
+	for (int i=0; i<PC.rows; i++)
+		randInd[i]=i;
+	shuffle(randInd, PC.rows);
+
+	for (int i=0; i<numPoints; i++)
+	{
+		PC.row(randInd[i]).copyTo(sampledPC.row(i));
+	}
+
+	delete[] (randInd);
+
+	return sampledPC;
 }

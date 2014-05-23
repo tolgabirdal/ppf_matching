@@ -62,7 +62,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="opengl32.lib glu32.lib tommyhash.lib opencv_core300d.lib opencv_imgproc300d.lib opencv_highgui300d.lib opencv_nonfree300d.lib opencv_features2d300d.lib opencv_calib3d300d.lib opencv_contrib300d.lib"
-				LinkIncremental="2"
+				LinkIncremental="1"
 				AdditionalLibraryDirectories="C:\Users\tolga\Documents\GitHub\opencv\bin\lib\Debug;./libs"
 				GenerateDebugInformation="true"
 				SubSystem="1"

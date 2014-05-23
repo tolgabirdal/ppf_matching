@@ -1,6 +1,8 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+#include <time.h>
 /*#include "opencv2/features2d.hpp"
 #include "opencv2/nonfree.hpp"
 #include "opencv2/highgui.hpp"
@@ -87,7 +89,9 @@ int compare(const void* arg, const void* obj)
 	return *(const int*)arg != ((THash*)obj)->id;
 }
 
-// test point cloud reading
+
+// test point cloud reading & visualization
+// for now uniform sampling looks better
 int main()
 {
 	int useNormals = 1;
@@ -96,7 +100,11 @@ int main()
 
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 	
-	visualize_pc(pc, useNormals);
+	Mat spc1 = sample_pc_uniform(pc, numVert/350);
+	Mat spc2 = sample_pc_random(pc, 350);
+	visualize_pc(pc, useNormals, "PC1");
+	visualize_pc(spc1, useNormals, "Uniform Sampled");
+	visualize_pc(spc2, useNormals, "Random Sampled");
 
 }
     
