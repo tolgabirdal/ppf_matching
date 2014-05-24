@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 	Mat load_ply_simple(const char* fileName, int numVertices, int withNormals);
-	void* visualize_pc(Mat cloud, int camera_pov, char* Title);
+	void* visualize_pc(Mat cloud, int withNormals, int withBbox, char* Title);
 	
 	Mat sample_pc_uniform(Mat PC, int sampleStep);
 	Mat sample_pc_random(Mat PC, int numPoints);

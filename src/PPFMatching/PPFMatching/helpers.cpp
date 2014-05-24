@@ -31,6 +31,16 @@ Mat load_ply_simple(const char* fileName, int numVertices, int withNormals)
 		if (withNormals)
 		{
 			ifs >> data[0] >> data[1] >> data[2] >> data[3] >> data[4] >> data[5];
+
+			// normalize to unit norm
+			double norm = sqrt(data[3]*data[3] + data[4]*data[4] + data[5]*data[5]);
+			if (norm>0.00001)
+			{
+				data[3]/=norm;
+				data[4]/=norm;
+				data[5]/=norm;
+			}
+
 		}
 		else
 		{
@@ -97,7 +107,7 @@ typedef struct
 {
 	Mat PC;
 	TWindowGL* window;
-	int withNormals;
+	int withNormals, withBbox;
 }TWindowData;
 
 static float light_diffuse[] = {100, 100, 100, 100.0f}; 
@@ -112,6 +122,7 @@ int display(void* UserData)
 	Mat pc = wd->PC;
 	TWindowGL* window = wd->window;
 	int withNormals = wd->withNormals;
+	int withBbox = wd->withBbox;
 
 	double minVal = 0, maxVal = 0;
 	double diam=5;
@@ -138,6 +149,7 @@ int display(void* UserData)
 	cv::minMaxIdx(pcn, &minVal, &maxVal);
 	pcn=(float)diam*(pcn)/((float)maxVal-(float)minVal);
 
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(60, 1.0, 1, diam*2);
@@ -147,6 +159,9 @@ int display(void* UserData)
 	gluLookAt (-diam, diam, diam/2,
                 0,0, 0,
                 0.0, 1.0, 0.0);
+
+	glRotatef(window->angle, window->rx, window->ry, window->rz);
+
 	/*glRotatef(80,0,0,1);
 	glRotatef(40,0,1,0);*/
 
@@ -159,8 +174,14 @@ int display(void* UserData)
     glMaterialfv(GL_FRONT, GL_AMBIENT, amb);
     glMaterialfv(GL_FRONT, GL_DIFFUSE, dif);
 
-	glColor4f(1,1,1,1);
-	glLineWidth(0.5);
+	//glColor4f(1,1,1,1);
+	int glSize = 2;
+	glLineWidth(glSize);
+	glPointSize(glSize);
+
+	/*glDisable(GL_LIGHT0);
+	glDisable(GL_LIGHT1);*/
+	glDisable(GL_LIGHTING);
 
 	glBegin(GL_POINTS);
 
@@ -169,18 +190,73 @@ int display(void* UserData)
 		float* dataPC = (float*)(&pc.data[i*pc.step[0]]);
 		float* data = (float*)(&pcn.data[i*pcn.step[0]]);
 		if (withNormals)
+		{
+			glColor4f(dataPC[3],dataPC[4],dataPC[5],1);
 			glNormal3f(dataPC[3], dataPC[4], dataPC[5]);
+		}
 
 		glVertex3f(data[0], data[1], data[2]);
 	}
 
 	glEnd();
 
+	if (withBbox)
+	{
+		glDisable(GL_LIGHT0);
+		glDisable(GL_LIGHT1);
+		glDisable(GL_LIGHTING);
+		glColor4f(0,1,0,1);
+
+		float xRange[2], yRange[2], zRange[2];
+		compute_obb(pcn, xRange, yRange, zRange);
+		
+		glBegin(GL_LINES);
+
+		glVertex3f(xRange[0], yRange[0], zRange[0]);
+		glVertex3f(xRange[1], yRange[0], zRange[0]);
+
+		glVertex3f(xRange[0], yRange[0], zRange[0]);
+		glVertex3f(xRange[0], yRange[1], zRange[0]);
+
+		glVertex3f(xRange[0], yRange[0], zRange[0]);
+		glVertex3f(xRange[0], yRange[0], zRange[1]);
+
+		glVertex3f(xRange[1], yRange[1], zRange[1]);
+		glVertex3f(xRange[1], yRange[1], zRange[0]);
+
+		glVertex3f(xRange[1], yRange[1], zRange[1]);
+		glVertex3f(xRange[1], yRange[0], zRange[1]);
+
+		glVertex3f(xRange[1], yRange[1], zRange[1]);
+		glVertex3f(xRange[0], yRange[1], zRange[1]);
+
+		glVertex3f(xRange[1], yRange[0], zRange[0]);
+		glVertex3f(xRange[1], yRange[0], zRange[1]);
+
+		glVertex3f(xRange[1], yRange[0], zRange[0]);
+		glVertex3f(xRange[1], yRange[1], zRange[0]);
+
+		glVertex3f(xRange[0], yRange[1], zRange[0]);
+		glVertex3f(xRange[0], yRange[1], zRange[1]);
+
+		glVertex3f(xRange[0], yRange[1], zRange[0]);
+		glVertex3f(xRange[1], yRange[1], zRange[0]);
+
+		glVertex3f(xRange[0], yRange[0], zRange[1]);
+		glVertex3f(xRange[0], yRange[1], zRange[1]);
+
+		glVertex3f(xRange[0], yRange[0], zRange[1]);
+		glVertex3f(xRange[1], yRange[0], zRange[1]);
+
+		glEnd();
+	}
+
+	//SwapBuffers(window->hDC);
+
 	return 0;
 }
 
-
-void* visualize_pc(Mat pc, int withNormals, char* Title)
+void* visualize_pc(Mat pc, int withNormals, int withBbox, char* Title)
 {
 	TWindowGL* window=(TWindowGL*)calloc(1, sizeof(TWindowGL));
 	int status=CreateGLWindow(window, Title, 300, 300, 512, 512, 24);
@@ -188,13 +264,16 @@ void* visualize_pc(Mat pc, int withNormals, char* Title)
 	MoveGLWindow(window, 300, 300);
 	update_window(window);
 
-	glEnable3D(45, 1, 3, 512, 512);
+	glEnable3D(45, 1, 5, 512, 512);
 
 	TWindowData* wd = new TWindowData();
 	wd->PC = pc;
 	wd->window = window;
 	wd->withNormals=withNormals;
-	draw_custom_gl_scene(window, display, wd);
+	wd->withBbox=withBbox;
+
+	//draw_custom_gl_scene(window, display, wd);
+	register_custom_gl_scene(window, display, wd);
 
 	//update_window(window);
 	wait_window(window);

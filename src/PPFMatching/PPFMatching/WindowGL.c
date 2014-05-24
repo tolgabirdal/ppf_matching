@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include "WindowGL.h"
+#include "trackball.h"
 #include "TRgbGL.h"
 
 #ifndef GL_TEXTURE_RECTANGLE_ARB
@@ -348,9 +349,11 @@ void drawPoints_3d(const float* x, const float* y, const float* z, const int len
 		currentWindow->sz=1;
 	glScalef(currentWindow->sx, currentWindow->sy, currentWindow->sz);
 	
-	glRotatef(currentWindow->rx, 1,0,0);
+	glRotatef(currentWindow->angle, currentWindow->rx, currentWindow->ry, currentWindow->rz);
+
+	/*glRotatef(currentWindow->rx, 1,0,0);
 	glRotatef(currentWindow->ry, 0,1,0);
-	glRotatef(currentWindow->rz, 0,0,1);
+	glRotatef(currentWindow->rz, 0,0,1);*/
 	
 	glTranslatef(currentWindow->tx, currentWindow->ty, currentWindow->tz);
 
@@ -533,6 +536,12 @@ void draw_custom_gl_scene(TWindowGL* window, TGLOpCallback Callback, void* Data)
 	glEndList();
 	list_add(&window->dispList,index);
 	window->displaySize++;
+}
+
+void register_custom_gl_scene(TWindowGL* window, TGLOpCallback Callback, void* Data)
+{
+	window->PaintCallback=Callback;
+	window->preservedData = Data;
 }
 
 int DrawGLSceneDefault(void* Data)		// Here's Where We Do All The Drawing
@@ -837,6 +846,10 @@ BOOL CreateGLWindow(TWindowGL* window, char* title, int X, int Y, int width, int
 	currentWindow->preservedData=0;
 	currentWindow->PaintCallback=DrawGLSceneDefault;
 
+	// start trackball: Not thread safe
+	startTrackball (width/2, height/2, 0, 0, width, height);
+	
+
 	return 0;										// Success
 }
 
@@ -886,6 +899,29 @@ static LRESULT CALLBACK WindowProc(	HWND hWnd,	// Handle For This Window
 	case WM_KEYDOWN:		// Is A Key Being Held Down?
 		{
 			currentWindow->keys[wParam] = TRUE;// If So, Mark It As TRUE
+			return 0;		// Jump Back
+		}
+
+	case WM_MOUSEMOVE:		// Is mouse moving ?
+		{
+			//currentWindow->keys[wParam] = TRUE;// If So, Mark It As TRUE
+
+			POINT mousePos;
+			RECT imagePos;
+
+			mousePos.x = LOWORD(lParam); 
+			mousePos.y = HIWORD(lParam);
+
+			/*GetWindowRect(GetDlgItem(hwnd, IDC_BANNERSITE), &imagePos);
+			if(PtInRect(&imagePos, mousePos))*/
+			rollToTrackball((long)mousePos.x, (long)mousePos.y, currentWindow->rot); // rot is output rotation angle
+			
+			currentWindow->angle = currentWindow->rot[0];
+
+			currentWindow->rx = currentWindow->rot[1];
+			currentWindow->ry = currentWindow->rot[2];
+			currentWindow->rz = currentWindow->rot[3];
+			
 			return 0;		// Jump Back
 		}
 

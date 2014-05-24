@@ -78,35 +78,50 @@ int hash_ppf(const double f[4], const double AngleStep, const double DistanceSte
 	return hashKey;
 }
 
-
-int t_create_match_model_pc(const Mat PC, const double RelSamplingStep, const double RelativeAngleStep, const double RelativeDistanceStep, TPPFModelPC** Model3D)
-{
-
-
-	return 0;
-}
-
 int compare(const void* arg, const void* obj)
 {
 	return *(const int*)arg != ((THash*)obj)->id;
 }
 
-// test bounding box
+int compute_ppf_pc(const Mat PC, const double RelSamplingStep, const double RelativeAngleStep, const double RelativeDistanceStep, TPPFModelPC** Model3D)
+{
+	
+	
+	return 0;
+}
+
+int main345345()
+{
+	int useNormals = 1;
+	int withBbox = 1;
+	int numVert = 176920;
+	const char* fn = "../../../data/cheff2.ply";
+	Mat pc = load_ply_simple(fn, numVert, useNormals);
+
+	
+
+	return 0;
+}
+
+// test bounding box _bbox
 int main()
 {
 	int useNormals = 1;
-	int numVert = 6700;
-	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
+	int withBbox = 1;
+	int numVert = 176920;
+	const char* fn = "../../../data/cheff2.ply";
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 
 	TPPFModelPC* Model3D = 0;
 
 	float xRange[2], yRange[2], zRange[2];
 	compute_obb(pc, xRange, yRange, zRange);
-	
 
-//	t_create_match_model_pc(pc, const double AngleStep, const double DistanceStep, &Model3D);
+	printf("Bounding box -- x: (%f, %f), y: (%f, %f), z: (%f, %f)\n", xRange[0], xRange[1], yRange[0], yRange[1], zRange[0], zRange[1]);
 
+	visualize_pc(pc, useNormals, withBbox, "Point Cloud");
+
+	return 0;
 }
 
 // test point cloud reading & visualization
@@ -114,6 +129,7 @@ int main()
 int main_ply()
 {
 	int useNormals = 1;
+	int withBbox = 0;
 	int numVert = 6700;
 	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
 
@@ -121,9 +137,9 @@ int main_ply()
 	
 	Mat spc1 = sample_pc_uniform(pc, numVert/350);
 	Mat spc2 = sample_pc_random(pc, 350);
-	visualize_pc(pc, useNormals, "PC1");
-	visualize_pc(spc1, useNormals, "Uniform Sampled");
-	visualize_pc(spc2, useNormals, "Random Sampled");
+	visualize_pc(pc, useNormals, withBbox, "PC1");
+	visualize_pc(spc1, useNormals, withBbox, "Uniform Sampled");
+	visualize_pc(spc2, useNormals, withBbox, "Random Sampled");
 
 	return 0;
 }

@@ -59,9 +59,11 @@ typedef struct TWindowGL
 	int displaySize;
 	void* preservedData;
 
-	float rx, ry, rz;
+	float rx, ry, rz, angle;
 	float sx, sy, sz;
 	float tx, ty, tz;
+
+	float rot[4];
 
 	TGLOpCallback PaintCallback;
 
@@ -126,6 +128,7 @@ extern "C" {
 	void t_write_string_gl_t(TWindowGL* window, const char* string, const int x, const int y);
 
 	void draw_custom_gl_scene(TWindowGL* window, TGLOpCallback Callback, void* Data);
+	void register_custom_gl_scene(TWindowGL* window, TGLOpCallback Callback, void* Data);
 
 	//void draw_mesh_3D_gl(TMesh3D *mesh, int useColors);
 
