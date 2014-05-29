@@ -60,10 +60,12 @@ typedef struct TWindowGL
 	void* preservedData;
 
 	float rx, ry, rz, angle;
+	float grx, gry, grz, gangle;
 	float sx, sy, sz;
 	float tx, ty, tz;
+	float rot[4], globalRot[4];
 
-	float rot[4];
+	int tracking;
 
 	TGLOpCallback PaintCallback;
 

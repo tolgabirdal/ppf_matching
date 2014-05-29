@@ -5,6 +5,7 @@
 #include <iostream>
 #include <time.h>
 #include <fstream>
+#include <opencv2/flann.hpp>
 
 using namespace std;
 using namespace cv;
@@ -160,7 +161,11 @@ int display(void* UserData)
                 0,0, 0,
                 0.0, 1.0, 0.0);
 
-	glRotatef(window->angle, window->rx, window->ry, window->rz);
+	if (window->tracking)
+		glRotatef(window->angle, window->rx, window->ry, window->rz);
+
+	glRotatef(window->gangle, window->grx, window->gry, window->grz);
+	//else
 
 	/*glRotatef(80,0,0,1);
 	glRotatef(40,0,1,0);*/
@@ -258,13 +263,16 @@ int display(void* UserData)
 
 void* visualize_pc(Mat pc, int withNormals, int withBbox, char* Title)
 {
+	int width = 1024;
+	int height = 1024;
+
 	TWindowGL* window=(TWindowGL*)calloc(1, sizeof(TWindowGL));
-	int status=CreateGLWindow(window, Title, 300, 300, 512, 512, 24);
+	int status=CreateGLWindow(window, Title, 300, 300, width, height, 24);
 
 	MoveGLWindow(window, 300, 300);
 	update_window(window);
 
-	glEnable3D(45, 1, 5, 512, 512);
+	glEnable3D(45, 1, 5, width, height);
 
 	TWindowData* wd = new TWindowData();
 	wd->PC = pc;
@@ -293,6 +301,33 @@ Mat sample_pc_uniform(Mat PC, int sampleStep)
 	}
 
 	return sampledPC;
+}
+
+// not yet implemented
+Mat sample_pc_perfect_uniform(Mat PC, int sampleStep)
+{
+	// make a symmetric square matrix for sampling
+	int numPoints = PC.rows;
+	int numPointsSampled = numPoints/sampleStep;
+
+	int n = sqrt((double)numPoints);
+	int numTotalPerfect = n*n;
+
+	
+	return Mat();
+}
+
+Mat sample_pc_kd_tree(Mat pc, float radius)
+{
+	typedef cv::flann::L2<float> Distance_32F;
+	cv::flann::SearchParams params;
+
+	flann::GenericIndex<Distance_32F>  flannIndex = new cv::flann::GenericIndex< Distance_32F > (pc, params);
+
+	Mat indices, dists;
+	flannIndex.radiusSearch(pc, indices, dists, radius, params);
+
+	
 }
 
 void shuffle(int *array, size_t n)

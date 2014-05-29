@@ -14,6 +14,7 @@ extern "C" {
 	void* visualize_pc(Mat cloud, int withNormals, int withBbox, char* Title);
 	
 	Mat sample_pc_uniform(Mat PC, int sampleStep);
+	Mat sample_pc_perfect_uniform(Mat PC, int sampleStep);
 	Mat sample_pc_random(Mat PC, int numPoints);
 
 	void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2]);

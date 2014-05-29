@@ -350,12 +350,13 @@ void drawPoints_3d(const float* x, const float* y, const float* z, const int len
 	glScalef(currentWindow->sx, currentWindow->sy, currentWindow->sz);
 	
 	glRotatef(currentWindow->angle, currentWindow->rx, currentWindow->ry, currentWindow->rz);
+	//glRotatef(currentWindow->gangle, currentWindow->grx, currentWindow->gry, currentWindow->grz);
 
 	/*glRotatef(currentWindow->rx, 1,0,0);
 	glRotatef(currentWindow->ry, 0,1,0);
 	glRotatef(currentWindow->rz, 0,0,1);*/
 	
-	glTranslatef(currentWindow->tx, currentWindow->ty, currentWindow->tz);
+	//glTranslatef(currentWindow->tx, currentWindow->ty, currentWindow->tz);
 
 	glColor4f(currentWindow->color.red,currentWindow->color.green,currentWindow->color.blue,1);
 	glLineWidth(currentWindow->line_width);
@@ -847,7 +848,7 @@ BOOL CreateGLWindow(TWindowGL* window, char* title, int X, int Y, int width, int
 	currentWindow->PaintCallback=DrawGLSceneDefault;
 
 	// start trackball: Not thread safe
-	startTrackball (width/2, height/2, 0, 0, width, height);
+	//startTrackball (width/2, height/2, 0, 0, width, height);
 	
 
 	return 0;										// Success
@@ -858,6 +859,9 @@ static LRESULT CALLBACK WindowProc(	HWND hWnd,	// Handle For This Window
 						 WPARAM	wParam,  // Additional Message Information
 						 LPARAM	lParam)	// Additional Message Information
 {
+	POINT mousePos;
+	RECT imagePos;
+
 	if (currentWindow==0)
 		return DefWindowProc(hWnd,uMsg,wParam,lParam);
 
@@ -906,25 +910,57 @@ static LRESULT CALLBACK WindowProc(	HWND hWnd,	// Handle For This Window
 		{
 			//currentWindow->keys[wParam] = TRUE;// If So, Mark It As TRUE
 
-			POINT mousePos;
-			RECT imagePos;
+			if (currentWindow->tracking && WM_LBUTTONDOWN)
+			{
+				POINT mousePos;
+				RECT imagePos;
 
-			mousePos.x = LOWORD(lParam); 
-			mousePos.y = HIWORD(lParam);
+				mousePos.x = LOWORD(lParam); 
+				mousePos.y = HIWORD(lParam);
 
-			/*GetWindowRect(GetDlgItem(hwnd, IDC_BANNERSITE), &imagePos);
-			if(PtInRect(&imagePos, mousePos))*/
-			rollToTrackball((long)mousePos.x, (long)mousePos.y, currentWindow->rot); // rot is output rotation angle
-			
-			currentWindow->angle = currentWindow->rot[0];
+				/*GetWindowRect(GetDlgItem(hwnd, IDC_BANNERSITE), &imagePos);
+				if(PtInRect(&imagePos, mousePos))*/
+				rollToTrackball((long)mousePos.x, (long)mousePos.y, currentWindow->rot); // rot is output rotation angle
 
-			currentWindow->rx = currentWindow->rot[1];
-			currentWindow->ry = currentWindow->rot[2];
-			currentWindow->rz = currentWindow->rot[3];
+				currentWindow->angle = currentWindow->rot[0];
+				currentWindow->rx = currentWindow->rot[1];
+				currentWindow->ry = currentWindow->rot[2];
+				currentWindow->rz = currentWindow->rot[3];
+			}
 			
 			return 0;		// Jump Back
 		}
 
+	case WM_LBUTTONDOWN:
+		
+		mousePos.x = LOWORD(lParam); 
+		mousePos.y = HIWORD(lParam);
+
+		currentWindow->rot[0]=0;
+		currentWindow->rot[1]=0;
+		currentWindow->rot[2]=0;
+		currentWindow->rot[3]=0;
+		startTrackball (mousePos.x, mousePos.y, 0, 0, currentWindow->width, currentWindow->height);
+		currentWindow->tracking = 1;
+		rollToTrackball((long)mousePos.x, (long)mousePos.y, currentWindow->rot);
+
+		return 0;
+	case WM_LBUTTONUP:
+		mousePos.x = LOWORD(lParam); 
+		mousePos.y = HIWORD(lParam);
+		rollToTrackball((long)mousePos.x, (long)mousePos.y, currentWindow->rot); // rot is output rotation angle
+		addToRotationTrackball(currentWindow->rot, currentWindow->globalRot);
+		currentWindow->gangle = currentWindow->globalRot[0];
+		currentWindow->grx = currentWindow->globalRot[1];
+		currentWindow->gry = currentWindow->globalRot[2];
+		currentWindow->grz = currentWindow->globalRot[3];
+		currentWindow->rot[0]=0;
+		currentWindow->rot[1]=0;
+		currentWindow->rot[2]=0;
+		currentWindow->rot[3]=0;
+		currentWindow->tracking = 0;
+		return 0;
+		
 	case WM_KEYUP:		// Has A Key Been Released?
 		{
 			currentWindow->keys[wParam] = FALSE;// If So, Mark It As FALSE

@@ -2,6 +2,8 @@
 #ifndef __UTILS_H_
 #define __UTILS_H_
 
+#define EPS		1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
+
 // Useful Macros
 #define TNORM3(v) (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))
 
@@ -44,6 +46,44 @@ extern "C" {
 	static __inline int next_power_of_two(int x)
 	{
 		return (int)pow(2.0, ceil(log((double)x)/log(2.0)));;
+	}
+
+	static __inline void compute_axis_angle_yz(double angle, const double r[3], double row2[3], double row3[3])
+	{
+		const double sinA=sin(angle);
+		const double cosA=cos(angle);
+		const double cos1A=(1-cosA);
+
+		row2[0] =  0.f;  row2[1] = cosA; row2[2] =  0.f; 
+		row3[0] =  0.f;  row3[1] =  0.f; row3[2] = cosA; 
+
+		row2[0] +=  r[2] * sinA; 
+		row2[2] += -r[0] * sinA; 
+		row3[0] += -r[1] * sinA; 
+		row3[1] +=  r[0] * sinA;
+
+		row2[0] += r[1] * r[0] * cos1A;  row2[1] += r[1] * r[1] * cos1A; row2[2] += r[1] * r[2] * cos1A;
+		row3[0] += r[2] * r[0] * cos1A;  row3[1] += r[2] * r[1] * cos1A; row3[2] += r[2] * r[2] * cos1A;
+	}
+
+	static __inline void compute_transform_rt_yz(const double p1[4], const double n1[4], double row2[3], double row3[3], double t[3])
+	{
+		double angle=acos( n1[0] );
+		double axis[3]={0, n1[2], -n1[1]};
+		double axisNorm;
+
+		axisNorm=sqrt(axis[2]*axis[2]+axis[1]*axis[1]);
+
+		if (axisNorm>EPS)
+		{
+			axis[1]/=axisNorm;
+			axis[2]/=axisNorm;
+		}
+
+		compute_axis_angle_yz(angle, axis, row2, row3);
+
+		t[1] = row2[0] * (-p1[0]) + row2[1] * (-p1[1]) + row2[2] * (-p1[2]);
+		t[2] = row3[0] * (-p1[0]) + row3[1] * (-p1[1]) + row3[2] * (-p1[2]);
 	}
 
 

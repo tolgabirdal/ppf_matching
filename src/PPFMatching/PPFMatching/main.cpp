@@ -48,21 +48,42 @@ void compute_ppf_features(const double p1[4], const double n1[4],
 						  const double p2[4], const double n2[4],
 						  double f[4])
 {
-	double delta[4] = {p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2], 0};
-	double f1,f2,f3,f4;
+	double d[4] = {p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2], 0};
 
-	f[3] = sqrt(delta[0]*delta[0]+delta[1]*delta[1]+delta[2]*delta[2]);
+	f[3] = sqrt(d[0]*d[0]+d[1]*d[1]+d[2]*d[2]);
 
 	if (f[3])
 	{
-		delta[0] /= f[3];
-		delta[1] /= f[3];
-		delta[2] /= f[3];
+		d[0] /= f[3];
+		d[1] /= f[3];
+		d[2] /= f[3];
+	}
+	else
+	{
+		// TODO: Handle this
+		f[0] = 0;
+		f[1] = 0;
+		f[2] = 0;
+		return ;
 	}
 
-	f[0] = n1[0] * delta[0] + n1[1] * delta[1] + n1[2] * delta[2];
-	f[1] = n2[0] * delta[0] + n2[1] * delta[1] + n2[2] * delta[2];
+	// dot products 
+	f[0] = n1[0] * d[0] + n1[1] * d[1] + n1[2] * d[2];
+	f[1] = n2[0] * d[0] + n2[1] * d[1] + n2[2] * d[2];
 	f[2] = n1[0] * n2[0] + n1[1] * n2[1] + n1[2] * n2[2];
+
+	// I have not computed the angles here as I don't want to compute acos yet.
+}
+
+// simple hashing
+int hash_ppf_simple(const double f[4], const double AngleStep, const double DistanceStep)
+{
+	const int d1 = (int) (floor ((double)f[0] / (double)AngleStep));
+	const int d2 = (int) (floor ((double)f[1] / (double)AngleStep));
+	const int d3 = (int) (floor ((double)f[2] / (double)AngleStep));
+	const int d4 = (int) (floor ((double)f[3] / (double)DistanceStep));
+	
+	return (d1 & (d2<<8) & (d3<<16) & (d4<<24));
 }
 
 // quantize ppf and hash it for proper indexing
@@ -83,27 +104,132 @@ int compare(const void* arg, const void* obj)
 	return *(const int*)arg != ((THash*)obj)->id;
 }
 
-int compute_ppf_pc(const Mat PC, const double RelSamplingStep, const double RelativeAngleStep, const double RelativeDistanceStep, TPPFModelPC** Model3D)
+// TODO: An initial attempt. I will double check this
+double compute_alpha(const double p1[4], const double n1[4], const double p2[4])
 {
-	
-	
-	return 0;
+	double Tmg[3], mpt[3], row2[3], row3[3], alpha;
+
+	compute_transform_rt_yz(p1, n1, row2, row3, Tmg);
+
+	mpt[1] = Tmg[1] + row2[0] * p2[0] + row2[1] * p2[1] + row2[2] * p2[2];
+    mpt[2] = Tmg[2] + row3[0] * p2[0] + row3[1] * p2[1] + row3[2] * p2[2];
+
+	alpha=atan2(-mpt[2], mpt[1]);
+
+	if ( alpha != alpha)
+    {
+		printf("NaN value!\n");
+		return 0;
+	}
+
+	if (sin(alpha)*mpt[2]<0.0)
+		alpha=-alpha;
+
+	return (-alpha);
 }
 
-int main345345()
+
+Mat compute_ppf_pc_train(const Mat PC, const double distanceStep, const double angleStep)
 {
-	int useNormals = 1;
-	int withBbox = 1;
-	int numVert = 176920;
-	const char* fn = "../../../data/cheff2.ply";
-	Mat pc = load_ply_simple(fn, numVert, useNormals);
+	Mat PPFMat = Mat(PC.rows*PC.rows, T_PPF_LENGTH, CV_32FC1);
 
-	
+	for (int i=0; i<PC.rows; i++)
+	{
+		for (int j=0; j<PC.rows; j++)
+		{
+			// cannnot compute the ppf with myself
+			if (i!=j)
+			{
+				float* f1 = (float*)(&PC.data[i * PC.step]);
+				float* f2 = (float*)(&PC.data[j * PC.step]);
+				const double p1[4] = {f1[0], f1[1], f1[2], 1};
+				const double p2[4] = {f2[0], f1[1], f1[2], 1};
+				const double n1[4] = {f1[3], f1[4], f1[5], 1};
+				const double n2[4] = {f2[3], f1[4], f1[5], 1};
 
-	return 0;
+				double f[4]={0};
+				compute_ppf_features(p1, n1, p2, n2, f);
+				double alpha = compute_alpha(p1, n1, p2);
+
+				int corrInd = i*PC.rows+j;
+				PPFMat.data[ corrInd ] = f[0];
+				PPFMat.data[ corrInd + 1 ] = f[1];
+				PPFMat.data[ corrInd + 2 ] = f[2];
+				PPFMat.data[ corrInd + 3 ] = f[3];
+				PPFMat.data[ corrInd + 4 ] = (float)alpha;
+			}
+		}
+	}
+
+	return PPFMat;
 }
 
-// test bounding box _bbox
+// TODO: Check all step sizes to be positive
+Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double distance_step_relative, const double angle_step_relative, TPPFModelPC** Model3D)
+{
+	const int numPoints = PC.rows;
+
+	// compute bbox
+	float xRange[2], yRange[2], zRange[2];
+	compute_obb(PC, xRange, yRange, zRange);
+
+	// compute sampling step from diameter of bbox
+	float dx = xRange[1] - xRange[0];
+	float dy = yRange[1] - yRange[0];
+	float dz = zRange[1] - zRange[0];
+	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
+	float distanceStep = diameter * sampling_step_relative;
+
+	float angleStepRadians = PI * angle_step_relative / 180.0;
+
+	tommy_hashtable* hashTable = (tommy_hashtable*)malloc(sizeof(tommy_hashtable));
+	Mat PPFMat = Mat(PC.rows*PC.rows, T_PPF_LENGTH, CV_32FC1);
+
+	// 262144 = 2^18
+	int size = next_power_of_two(100000);
+	tommy_hashtable_init(hashTable, size);
+
+	for (int i=0; i<PC.rows; i++)
+	{
+		for (int j=0; j<PC.rows; j++)
+		{
+			// cannnot compute the ppf with myself
+			if (i!=j)
+			{
+				float* f1 = (float*)(&PC.data[i * PC.step]);
+				float* f2 = (float*)(&PC.data[j * PC.step]);
+				const double p1[4] = {f1[0], f1[1], f1[2], 1};
+				const double p2[4] = {f2[0], f1[1], f1[2], 1};
+				const double n1[4] = {f1[3], f1[4], f1[5], 1};
+				const double n2[4] = {f2[3], f1[4], f1[5], 1};
+
+				double f[4]={0};
+				compute_ppf_features(p1, n1, p2, n2, f);
+				int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
+				double alpha = compute_alpha(p1, n1, p2);
+				int corrInd = i*PC.rows+j;
+
+				THash* hashNode = (THash*)calloc(1, sizeof(THash));
+				hashNode->id = hash;
+				hashNode->data = (void*)corrInd;
+				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashNode->id));
+
+				PPFMat.data[ corrInd ] = f[0];
+				PPFMat.data[ corrInd + 1 ] = f[1];
+				PPFMat.data[ corrInd + 2 ] = f[2];
+				PPFMat.data[ corrInd + 3 ] = f[3];
+				PPFMat.data[ corrInd + 4 ] = (float)alpha;
+			}
+		}
+	}
+
+	//return compute_ppf_pc_train(pc, distanceStep, angleStepRadians);
+
+
+	
+	return PPFMat;
+}
+
 int main()
 {
 	int useNormals = 1;
@@ -112,7 +238,23 @@ int main()
 	const char* fn = "../../../data/cheff2.ply";
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 
-	TPPFModelPC* Model3D = 0;
+	TPPFModelPC* ppfModel = 0;
+	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
+
+
+	//compute_ppf_pc(pc, PPFMAt, const double RelSamplingStep, const double RelativeAngleStep, const double RelativeDistanceStep, TPPFModelPC** Model3D)
+
+	return 0;
+}
+
+// test bounding box  _bbox
+int main_bbox()
+{
+	int useNormals = 1;
+	int withBbox = 1;
+	int numVert = 176920;
+	const char* fn = "../../../data/cheff2.ply";
+	Mat pc = load_ply_simple(fn, numVert, useNormals);
 
 	float xRange[2], yRange[2], zRange[2];
 	compute_obb(pc, xRange, yRange, zRange);

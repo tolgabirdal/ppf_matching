@@ -368,3 +368,5 @@ void quaternion_to_matrix(double *q, double *R)
     R[7] = 2.0 * (tmp1 - tmp2);
 }
 
+
+
