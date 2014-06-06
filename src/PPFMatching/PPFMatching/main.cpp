@@ -21,6 +21,7 @@
 #include "opencv2/core/eigen.hpp"
 
 
+
 using namespace cv;
 
 typedef struct THash {
@@ -230,7 +231,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	return PPFMat;
 }
 
-int main()
+int main_ppff()
 {
 	int useNormals = 1;
 	int withBbox = 1;
@@ -243,6 +244,108 @@ int main()
 
 
 	//compute_ppf_pc(pc, PPFMAt, const double RelSamplingStep, const double RelativeAngleStep, const double RelativeDistanceStep, TPPFModelPC** Model3D)
+
+	return 0;
+}
+
+
+// test octree point cloud sampling
+int main()
+{
+	int useNormals = 1;
+	int withBbox = 1;
+	int withOctree = 0;
+	int numVert = 6700;
+	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
+	Mat pc = load_ply_simple(fn, numVert, useNormals);
+
+	float xRange[2], yRange[2], zRange[2];
+	compute_obb(pc, xRange, yRange, zRange);
+
+	Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, 0.05);
+
+	visualize_pc(sampled, 0, 1, 0, "Point Cloud");
+
+	return 0;
+}
+
+// test octree visualization
+int main_octree_vis()
+{
+	int useNormals = 1;
+	int withBbox = 1;
+	int withOctree = 0;
+	int numVert = 6700;
+	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
+	Mat pc = load_ply_simple(fn, numVert, useNormals);
+
+	visualize_pc(pc, useNormals, withBbox, withOctree, "Point Cloud");
+
+	return 0;
+}
+
+bool is_in_bbox(const float *point, const float range[2]) 
+{
+	return 
+		point[0] >= range[0] &&
+		point[1] >= range[0] &&
+		point[2] >= range[0] &&
+		point[0] <= range[1] &&
+		point[1] <= range[1] &&
+		point[2] <= range[1];
+}
+
+// test octree
+int main_octree()
+{
+	TOctreeNode oc;
+	const float dim = 2;
+	float root[3]={0,0,0};
+	float dimHalf[3]={dim/2,dim/2,dim/2};
+
+	float range[2]={-0.05, 0.05};
+
+	t_octree_init(&oc, root, dimHalf);
+
+	std::vector<float*> points;
+	std::vector<float*> resultsGT, resultsOT;
+
+	// Create a bunch of random points
+	const int nPoints = 1 * 1000 * 1000; 
+	for(int i=0; i<nPoints; ++i) 
+	{
+		float px = (0-dim/2) + (dim*rand()) * ((dim/2) / RAND_MAX);
+		float py = (0-dim/2) + (dim*rand()) * ((dim/2) / RAND_MAX);
+		float pz = (0-dim/2) + (dim*rand()) * ((dim/2) / RAND_MAX);
+
+		float* pt =new float[3];
+		pt[0]=px;
+		pt[1]=py;
+		pt[2]=pz;
+		points.push_back(pt);
+
+		bool gt = is_in_bbox(pt, range) ;
+		resultsGT.push_back(pt);
+
+		if (gt)
+			printf("%f %f %f\n", pt[0], pt[1], pt[2]);
+
+		t_octree_insert(&oc, pt);
+	}
+
+	// now compute octree results
+
+	printf("\n----------------------------------------------------------------\n");
+
+	t_octree_query_in_bbox(&oc, range, range, range, resultsOT);
+
+	for(int i=0; i<resultsOT.size(); ++i) 
+	{
+		float* rot = resultsOT[i];
+		printf("%f %f %f\n", rot[0], rot[1], rot[2]);
+	}
+
+
 
 	return 0;
 }
@@ -261,7 +364,7 @@ int main_bbox()
 
 	printf("Bounding box -- x: (%f, %f), y: (%f, %f), z: (%f, %f)\n", xRange[0], xRange[1], yRange[0], yRange[1], zRange[0], zRange[1]);
 
-	visualize_pc(pc, useNormals, withBbox, "Point Cloud");
+	visualize_pc(pc, useNormals, withBbox, 0, "Point Cloud");
 
 	return 0;
 }
@@ -279,9 +382,9 @@ int main_ply()
 	
 	Mat spc1 = sample_pc_uniform(pc, numVert/350);
 	Mat spc2 = sample_pc_random(pc, 350);
-	visualize_pc(pc, useNormals, withBbox, "PC1");
-	visualize_pc(spc1, useNormals, withBbox, "Uniform Sampled");
-	visualize_pc(spc2, useNormals, withBbox, "Random Sampled");
+	visualize_pc(pc, useNormals, withBbox, 0, "PC1");
+	visualize_pc(spc1, useNormals, withBbox, 0, "Uniform Sampled");
+	visualize_pc(spc2, useNormals, withBbox, 0, "Random Sampled");
 
 	return 0;
 }

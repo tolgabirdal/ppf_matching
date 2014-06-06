@@ -189,6 +189,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\gl_utils.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\helpers.cpp"
 				>
 			</File>
@@ -198,6 +202,10 @@
 			</File>
 			<File
 				RelativePath=".\normal.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\t_octree.cpp"
 				>
 			</File>
 			<File
@@ -231,11 +239,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\gl_utils.h"
+				>
+			</File>
+			<File
 				RelativePath=".\hash_murmur.h"
 				>
 			</File>
 			<File
 				RelativePath=".\helpers.h"
+				>
+			</File>
+			<File
+				RelativePath=".\t_octree.h"
 				>
 			</File>
 			<File

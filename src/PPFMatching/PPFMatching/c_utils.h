@@ -8,13 +8,15 @@
 #define TNORM3(v) (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))
 
 #define TNormalize3(v)\
-double normTemp=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);\
+double normTemp=TNORM3(v);\
 if (normTemp>0)\
 {\
 v[0]/=normTemp;\
 v[1]/=normTemp;\
 v[2]/=normTemp;\
 }
+
+
 
 #if defined (__cplusplus)
 extern "C" {
