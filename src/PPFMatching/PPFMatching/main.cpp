@@ -49,11 +49,19 @@ void compute_ppf_features(const double p1[4], const double n1[4],
 						  const double p2[4], const double n2[4],
 						  double f[4])
 {
+	/* 
+		Vectors will be defined as of length 4 instead of 3, because of:
+		- Further SIMD vectorization
+		- Cache alignment
+	*/
+
 	double d[4] = {p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2], 0};
+	double c[4];
 
-	f[3] = sqrt(d[0]*d[0]+d[1]*d[1]+d[2]*d[2]);
+	double norm = TNorm3(d); 
+	f[3] = norm;
 
-	if (f[3])
+	if (norm)
 	{
 		d[0] /= f[3];
 		d[1] /= f[3];
@@ -68,12 +76,17 @@ void compute_ppf_features(const double p1[4], const double n1[4],
 		return ;
 	}
 
-	// dot products 
-	f[0] = n1[0] * d[0] + n1[1] * d[1] + n1[2] * d[2];
-	f[1] = n2[0] * d[0] + n2[1] * d[1] + n2[2] * d[2];
-	f[2] = n1[0] * n2[0] + n1[1] * n2[1] + n1[2] * n2[2];
+	/*
+		Issues of numerical stability is of concern here.
+		Bertram's suggestion: atan2(a dot b, |axb|)
+		My correction : 
+		I guess it should be: angle = atan2(norm(cross(a,b)), dot(a,b))
+		The macro is implemented accordingly.
+	*/
 
-	// I have not computed the angles here as I don't want to compute acos yet.
+	TAngle3(n1, d, c, f[0]);
+	TAngle3(n2, d, c, f[1]);
+	TAngle3(n1, n1, c, f[2]);
 }
 
 // simple hashing
@@ -181,34 +194,36 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
 	float distanceStep = diameter * sampling_step_relative;
 
-	float angleStepRadians = PI * angle_step_relative / 180.0;
+	Mat sampled = sample_pc_octree(PC, xRange, yRange, zRange, sampling_step_relative);
+
+	float angleStepRadians = (360/angle_step_relative)*PI/180;
 
 	tommy_hashtable* hashTable = (tommy_hashtable*)malloc(sizeof(tommy_hashtable));
-	Mat PPFMat = Mat(PC.rows*PC.rows, T_PPF_LENGTH, CV_32FC1);
+	Mat PPFMat = Mat(sampled.rows*sampled.rows, T_PPF_LENGTH, CV_32FC1);
 
 	// 262144 = 2^18
-	int size = next_power_of_two(100000);
+	int size = next_power_of_two(sampled.rows*sampled.rows);
 	tommy_hashtable_init(hashTable, size);
 
-	for (int i=0; i<PC.rows; i++)
+	for (int i=0; i<sampled.rows; i++)
 	{
-		for (int j=0; j<PC.rows; j++)
+		for (int j=0; j<sampled.rows; j++)
 		{
 			// cannnot compute the ppf with myself
 			if (i!=j)
 			{
-				float* f1 = (float*)(&PC.data[i * PC.step]);
-				float* f2 = (float*)(&PC.data[j * PC.step]);
-				const double p1[4] = {f1[0], f1[1], f1[2], 1};
-				const double p2[4] = {f2[0], f1[1], f1[2], 1};
-				const double n1[4] = {f1[3], f1[4], f1[5], 1};
-				const double n2[4] = {f2[3], f1[4], f1[5], 1};
+				float* f1 = (float*)(&sampled.data[i * PC.step]);
+				float* f2 = (float*)(&sampled.data[j * PC.step]);
+				const double p1[4] = {f1[0], f1[1], f1[2], 0};
+				const double p2[4] = {f2[0], f1[1], f1[2], 0};
+				const double n1[4] = {f1[3], f1[4], f1[5], 0};
+				const double n2[4] = {f2[3], f1[4], f1[5], 0};
 
 				double f[4]={0};
 				compute_ppf_features(p1, n1, p2, n2, f);
 				int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
 				double alpha = compute_alpha(p1, n1, p2);
-				int corrInd = i*PC.rows+j;
+				int corrInd = i*sampled.rows+j;
 
 				THash* hashNode = (THash*)calloc(1, sizeof(THash));
 				hashNode->id = hash;
@@ -231,12 +246,12 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	return PPFMat;
 }
 
-int main_ppff()
+int main()
 {
 	int useNormals = 1;
 	int withBbox = 1;
-	int numVert = 176920;
-	const char* fn = "../../../data/cheff2.ply";
+	int numVert = 6700;
+	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 
 	TPPFModelPC* ppfModel = 0;
@@ -250,7 +265,7 @@ int main_ppff()
 
 
 // test octree point cloud sampling
-int main()
+int main_octree_sampling()
 {
 	int useNormals = 1;
 	int withBbox = 1;

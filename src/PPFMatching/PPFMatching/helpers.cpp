@@ -355,6 +355,7 @@ Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], 
 	float dx=pdx+xstep, dy=pdy+ystep, dz=pdz+zstep;
 
 	int numPoints = 0, c=0;
+	int interpNormals = (pc.cols==6);		
 
 	// count the number of points
 	while (pdx<=xrange[1])
@@ -394,6 +395,7 @@ Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], 
 				float zbox[2] = {pdz, dz};
 				int j;
 				float px=0, py=0, pz=0;
+				float nx=0, ny=0, nz=0;
 				std::vector<float*> results;
 				float *pcData = (float*)(&pcSampled.data[c*pcSampled.step[0]]);
 
@@ -401,20 +403,49 @@ Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], 
 
 				if (results.size())
 				{
-					for (j=0; j<results.size(); j++)
+					if (!interpNormals)
 					{
-						px += results[j][0];
-						py += results[j][1];
-						pz += results[j][2];
+						for (j=0; j<results.size(); j++)
+						{
+							px += results[j][0];
+							py += results[j][1];
+							pz += results[j][2];
+						}
+
+						px/=(float)results.size();
+						py/=(float)results.size();
+						pz/=(float)results.size();
+
+						pcData[0]=px;
+						pcData[1]=py;
+						pcData[2]=pz;
 					}
+					else
+					{
+						for (j=0; j<results.size(); j++)
+						{
+							px += results[j][0];
+							py += results[j][1];
+							pz += results[j][2];
+							nx += results[j][3];
+							ny += results[j][4];
+							nz += results[j][5];
+						}
 
-					px/=(float)results.size();
-					py/=(float)results.size();
-					pz/=(float)results.size();
+						px/=(float)results.size();
+						py/=(float)results.size();
+						pz/=(float)results.size();
+						nx/=(float)results.size();
+						ny/=(float)results.size();
+						nz/=(float)results.size();
 
-					pcData[0]=px;
-					pcData[1]=py;
-					pcData[2]=pz;
+						pcData[0]=px;
+						pcData[1]=py;
+						pcData[2]=pz;
+						pcData[3]=nx;
+						pcData[4]=ny;
+						pcData[5]=nz;
+					}
 
 					c++;
 				}

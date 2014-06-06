@@ -5,10 +5,10 @@
 #define EPS		1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
 
 // Useful Macros
-#define TNORM3(v) (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))
+#define TNorm3(v) (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))
 
 #define TNormalize3(v)\
-double normTemp=TNORM3(v);\
+double normTemp=TNorm3(v);\
 if (normTemp>0)\
 {\
 v[0]/=normTemp;\
@@ -16,6 +16,14 @@ v[1]/=normTemp;\
 v[2]/=normTemp;\
 }
 
+#define TCross(a, b, c) c[0] = (a[1])*(b[2])-(a[2])*(b[1]); c[1] = (a[2])*(b[0])-(a[0])*(b[2]); c[2] = (a[0])*(b[1])-(a[1])*(b[0]);
+
+#define TDot3(a,b) ((a[0])*(b[0])+(a[1])*(b[1])+(a[2])*(b[2]))
+
+#define TAngle3(a, b, c, f) {\
+	TCross(a,b,c);\
+	f = (atan2(TNorm3(c), TDot3(a, b)));\
+}
 
 
 #if defined (__cplusplus)
