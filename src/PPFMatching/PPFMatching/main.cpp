@@ -12,9 +12,11 @@
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/rgbd.hpp"
+#include "opencv2/flann.hpp"
 #include "helpers.h"
 #include "c_utils.h"
 #include "hash_murmur.h"
+#include "THashInt.h"
 #include <tommy.h>
 
 #include <Eigen/Core>
@@ -34,11 +36,12 @@ typedef struct
 {
 	int magic;
 	double maxDist, angleStep, distStep;
-	Mat inputPC;
+	Mat inputPC, PPF;
 	flann::Index pcTree;
 	Mat alpha_m;
 	int n;
-	THash* hashTable;
+	tommy_hashtable* hashTable;
+//	hashtable_int* hashTable;
 }TPPFModelPC;
 
 
@@ -97,7 +100,7 @@ int hash_ppf_simple(const double f[4], const double AngleStep, const double Dist
 	const int d3 = (int) (floor ((double)f[2] / (double)AngleStep));
 	const int d4 = (int) (floor ((double)f[3] / (double)DistanceStep));
 	
-	return (d1 & (d2<<8) & (d3<<16) & (d4<<24));
+	return (d1 | (d2<<8) | (d3<<16) | (d4<<24));
 }
 
 // quantize ppf and hash it for proper indexing
@@ -113,6 +116,14 @@ int hash_ppf(const double f[4], const double AngleStep, const double DistanceSte
 	return hashKey;
 }
 
+size_t hash_murmur(unsigned int key)
+{
+	size_t hashKey=0;
+	MurmurHash3_x86_32((void*)&key, 4, 42, &hashKey);
+	return hashKey;
+}
+
+// tommy's compare function
 int compare(const void* arg, const void* obj)
 {
 	return *(const int*)arg != ((THash*)obj)->id;
@@ -199,11 +210,13 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	float angleStepRadians = (360/angle_step_relative)*PI/180;
 
 	tommy_hashtable* hashTable = (tommy_hashtable*)malloc(sizeof(tommy_hashtable));
-	Mat PPFMat = Mat(sampled.rows*sampled.rows, T_PPF_LENGTH, CV_32FC1);
-
 	// 262144 = 2^18
 	int size = next_power_of_two(sampled.rows*sampled.rows);
 	tommy_hashtable_init(hashTable, size);
+
+	//hashtable_int* hashTable = hashtable_int_create(sampled.rows*sampled.rows, NULL);
+	
+	Mat PPFMat = Mat(sampled.rows*sampled.rows, T_PPF_LENGTH, CV_32FC1);
 
 	for (int i=0; i<sampled.rows; i++)
 	{
@@ -221,9 +234,13 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
 				double f[4]={0};
 				compute_ppf_features(p1, n1, p2, n2, f);
-				int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
+				unsigned int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
 				double alpha = compute_alpha(p1, n1, p2);
-				int corrInd = i*sampled.rows+j;
+				unsigned int corrInd = i*sampled.rows+j;
+
+				//hashtable_int_insert(hashTable, hash, (void*)corrInd);
+				//printf("%f %f %f %f \n", f[0], f[1], f[2], f[3]);
+				//printf("%d\n", hash);
 
 				THash* hashNode = (THash*)calloc(1, sizeof(THash));
 				hashNode->id = hash;
@@ -239,11 +256,37 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 		}
 	}
 
+	*Model3D = (TPPFModelPC*)malloc(sizeof(TPPFModelPC));
+
+	(*Model3D)->angleStep = angleStepRadians;
+	(*Model3D)->distStep = distanceStep;
+	(*Model3D)->hashTable = hashTable;
+	(*Model3D)->PPF = PPFMat;
+
+	//(*Model3D)->magic=T_MAGIC_VAL_PC_MODEL;
+
+
+
 	//return compute_ppf_pc_train(pc, distanceStep, angleStepRadians);
-
-
 	
 	return PPFMat;
+}
+
+Mat t_load_ppf_model(const char* FileName)
+{
+	Mat ppf = Mat();
+
+	return ppf;
+}
+
+void t_match_pc_ppf(Mat pc)
+{
+	typedef cvflann::L2<float> Distance_32F;
+	cvflann::AutotunedIndexParams params;
+
+	cvflann::Index<Distance_32F> * flannIndex = new cvflann::Index< Distance_32F > (pc, params);
+
+
 }
 
 int main()
@@ -405,7 +448,7 @@ int main_ply()
 }
     
 // test hash table
-int main_hash_test()
+/*int main_hash_test()
 {
 	int value_to_find = 227;
 	THash* objFound ;
@@ -435,4 +478,4 @@ int main_hash_test()
 
 
 	return 0;
-}
+}*/

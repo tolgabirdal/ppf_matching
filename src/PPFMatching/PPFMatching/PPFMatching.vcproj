@@ -209,6 +209,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\THashInt.c"
+				>
+			</File>
+			<File
 				RelativePath=".\trackball.c"
 				>
 			</File>
@@ -252,6 +256,10 @@
 			</File>
 			<File
 				RelativePath=".\t_octree.h"
+				>
+			</File>
+			<File
+				RelativePath=".\THashInt.h"
 				>
 			</File>
 			<File

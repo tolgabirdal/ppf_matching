@@ -3,6 +3,7 @@
 #define __HELPERS_H_
 
 #include <opencv2/core.hpp>
+#include <opencv2/flann.hpp>
 #include "t_octree.h"
 
 using namespace cv;
@@ -22,7 +23,8 @@ extern "C" {
 	void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2]);
 	
 	TOctreeNode* Mat2Octree(Mat pc);
-
+	void* index_pc_flann(Mat pc);
+	
 #if defined (__cplusplus)
 }
 #endif

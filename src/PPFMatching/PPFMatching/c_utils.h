@@ -53,10 +53,11 @@ extern "C" {
 		R[8] = A[6] * B[2] + A[7] * B[5] + A[8] * B[8];            
 	}
 
-	static __inline int next_power_of_two(int x)
+	/*static __inline int next_power_of_two(int x)
 	{
 		return (int)pow(2.0, ceil(log((double)x)/log(2.0)));;
-	}
+	}*/
+
 
 	static __inline void compute_axis_angle_yz(double angle, const double r[3], double row2[3], double row3[3])
 	{

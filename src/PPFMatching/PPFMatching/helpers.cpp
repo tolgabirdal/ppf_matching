@@ -44,7 +44,6 @@ Mat load_ply_simple(const char* fileName, int numVertices, int withNormals)
 				data[4]/=norm;
 				data[5]/=norm;
 			}
-
 		}
 		else
 		{
@@ -329,18 +328,30 @@ Mat sample_pc_perfect_uniform(Mat PC, int sampleStep)
 	return Mat();
 }
 
-Mat sample_pc_kd_tree(Mat pc, float radius)
-{
-	/*typedef cv::flann::L2<float> Distance_32F;
-	cv::flann::SearchParams params;
 
-	flann::GenericIndex<Distance_32F>  flannIndex = new cv::flann::GenericIndex< Distance_32F > (pc, params);
-
-	Mat indices, dists;
-	flannIndex.radiusSearch(pc, indices, dists, radius, params);
-*/
-	return Mat();
+void* index_pc_flann(Mat pc)
+{	
+	typedef cvflann::L2<float> Distance_32F;
+	cvflann::AutotunedIndexParams params;
 	
+	cvflann::Matrix<float> data( (float*)pc.data, pc.rows, pc.cols );
+	
+	cvflann::Index < Distance_32F>* flannIndex = new cvflann::Index< Distance_32F >(data, params);
+
+	return (void*)flannIndex;
+}	
+
+Mat sample_pc_kd_tree(Mat pc, float radius, int numNeighbors)
+{
+	cvflann::Index < Distance_32F>* flannIndex = (cvflann::Index < Distance_32F>*)index_pc_flann(pc);
+	
+	cv::Mat1i ind(pc.rows, numNeighbors);
+	cvflann::Matrix<int> indices((int*) ind.data, ind.rows, ind.cols);
+	cvflann::Matrix<float> dists(new float[data.rows*numNeighbors], pc.rows, numNeighbors);
+
+	flannIndex->radiusSearch(pc, indices, dists, radius, params);
+
+	return Mat();	
 }
 
 Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], float resolution)
@@ -380,6 +391,7 @@ Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], 
 	dx=pdx+xstep;  
 
 	//while (dx<xrange[1] && dy<yrange[1] && dz<zrange[1])
+	// query discrete bounding boxes over the octree
 	while (pdx<=xrange[1])
 	{
 		float xbox[2] = {pdx, dx};
@@ -503,6 +515,7 @@ Mat sample_pc_random(Mat PC, int numPoints)
 	return sampledPC;
 }
 
+// compute the oriented bounding box
 void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2])
 {
 	Mat pcPts = pc.colRange(0, 3);
