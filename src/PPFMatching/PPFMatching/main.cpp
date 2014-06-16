@@ -279,11 +279,83 @@ Mat t_load_ppf_model(const char* FileName)
 	return ppf;
 }
 
-void t_match_pc_ppf(Mat pc, TPPFModelPC* Model3D)
+void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppfModel)
 {
 	cvflann::Matrix<float> data;
-	cvflann::Index<Distance_32F>* flannIndex  = (cvflann::Index<Distance_32F>*)index_pc_flann(pc, data);
+	int i;
+	int numNeighbors = 1000;
+	int numAngles = (int) (floor (2 * M_PI / ppfModel->angleStep));
+	int max_votes_i = 0, max_votes_j = 0;
+	int max_votes = 0;
+	double f1, f2, f3, f4;
+	unsigned int* accumulator;
+	unsigned int n = pc.rows/SampleStep;
+	cvflann::Index<Distance_32F>* flannIndex;
+	float angleStepRadians = ppfModel->angleStep;
+	float distanceStep = ppfModel->distStep;
 
+	// allocate the accumulator
+	accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
+	
+	// obtain the tree representation for fast search
+	flannIndex  = (cvflann::Index<Distance_32F>*)index_pc_flann(pc, data);
+
+	cv::Mat1i ind(pc.rows, numNeighbors);
+	cvflann::Matrix<int> indices((int*) ind.data, ind.rows, ind.cols);
+	cvflann::Matrix<float> dists(new float[pc.rows*numNeighbors], pc.rows, numNeighbors);
+
+	for (i = 0; i < pc.rows; i += 5)
+	{
+		int j;
+
+		float* f1 = (float*)(&pc.data[i * pc.step]);
+		const double p1[4] = {f1[0], f1[1], f1[2], 0};
+		const double n1[4] = {f1[3], f1[4], f1[5], 0};
+		double row1[3], row2[3], row3[3], Tsg[3];
+
+		compute_transform_rt_yz(p1, n1, row2, row3, Tsg);
+		//compute_transform_rt(psr, nsr, row1, row2, row3, Tsg);
+
+		// This is a later issue: We might want to look into a local neighborhood only
+		// flannIndex->radiusSearch(data, indices, dists, radius, searchParams);
+
+		for (j = 0; j < pc.rows; j ++)
+		{
+			if (i!=j)
+			{
+				float* f2 = (float*)(&pc.data[j * pc.step]);
+				const double p2[4] = {f2[0], f2[1], f2[2], 0};
+				const double n2[4] = {f2[3], f2[4], f2[5], 0};
+				
+				double f[4]={0};
+				compute_ppf_features(p1, n1, p2, n2, f);
+				unsigned int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
+
+				double alpha = compute_alpha(p1, n1, p2);
+				unsigned int corrInd = i*pc.rows+j;
+
+				//hashtable_int_insert(hashTable, hash, (void*)corrInd);
+				//printf("%f %f %f %f \n", f[0], f[1], f[2], f[3]);
+				//printf("%d\n", hash);
+
+				THash* hashNode = (THash*)calloc(1, sizeof(THash));
+				hashNode->id = hash;
+				hashNode->data = (void*)corrInd;
+				tommy_hashtable_node* node = tommy_hashtable_bucket(ppfModel->hashTable, tommy_inthash_u32(hashNode->id));
+
+				while (node)
+				{
+					int corrInd = (int)node->data;
+					//int accIndex = corrInd * ;
+					node=node->next;
+				}
+				//tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashNode->id));
+
+			}
+		}
+
+
+	}
 	
 }
 
