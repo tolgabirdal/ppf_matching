@@ -279,14 +279,12 @@ Mat t_load_ppf_model(const char* FileName)
 	return ppf;
 }
 
-void t_match_pc_ppf(Mat pc)
+void t_match_pc_ppf(Mat pc, TPPFModelPC* Model3D)
 {
-	typedef cvflann::L2<float> Distance_32F;
-	cvflann::AutotunedIndexParams params;
+	cvflann::Matrix<float> data;
+	cvflann::Index<Distance_32F>* flannIndex  = (cvflann::Index<Distance_32F>*)index_pc_flann(pc, data);
 
-	cvflann::Index<Distance_32F> * flannIndex = new cvflann::Index< Distance_32F > (pc, params);
-
-
+	
 }
 
 int main()

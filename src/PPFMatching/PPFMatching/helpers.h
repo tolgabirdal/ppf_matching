@@ -8,6 +8,8 @@
 
 using namespace cv;
 
+typedef cvflann::L2<float> Distance_32F;
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -23,7 +25,7 @@ extern "C" {
 	void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2]);
 	
 	TOctreeNode* Mat2Octree(Mat pc);
-	void* index_pc_flann(Mat pc);
+	void* index_pc_flann(Mat pc, cvflann::Matrix<float>& data);
 	
 #if defined (__cplusplus)
 }

@@ -329,12 +329,11 @@ Mat sample_pc_perfect_uniform(Mat PC, int sampleStep)
 }
 
 
-void* index_pc_flann(Mat pc)
+void* index_pc_flann(Mat pc, cvflann::Matrix<float>& data)
 {	
-	typedef cvflann::L2<float> Distance_32F;
 	cvflann::AutotunedIndexParams params;
 	
-	cvflann::Matrix<float> data( (float*)pc.data, pc.rows, pc.cols );
+	data = cvflann::Matrix<float>( (float*)pc.data, pc.rows, pc.cols );
 	
 	cvflann::Index < Distance_32F>* flannIndex = new cvflann::Index< Distance_32F >(data, params);
 
@@ -343,13 +342,16 @@ void* index_pc_flann(Mat pc)
 
 Mat sample_pc_kd_tree(Mat pc, float radius, int numNeighbors)
 {
-	cvflann::Index < Distance_32F>* flannIndex = (cvflann::Index < Distance_32F>*)index_pc_flann(pc);
+	cvflann::AutotunedIndexParams params;
+	cvflann::SearchParams searchParams;
+	cvflann::Matrix<float> data;
+	cvflann::Index < Distance_32F>* flannIndex = (cvflann::Index < Distance_32F>*)index_pc_flann(pc, data);
 	
 	cv::Mat1i ind(pc.rows, numNeighbors);
 	cvflann::Matrix<int> indices((int*) ind.data, ind.rows, ind.cols);
-	cvflann::Matrix<float> dists(new float[data.rows*numNeighbors], pc.rows, numNeighbors);
+	cvflann::Matrix<float> dists(new float[pc.rows*numNeighbors], pc.rows, numNeighbors);
 
-	flannIndex->radiusSearch(pc, indices, dists, radius, params);
+	flannIndex->radiusSearch(data, indices, dists, radius, searchParams);
 
 	return Mat();	
 }
