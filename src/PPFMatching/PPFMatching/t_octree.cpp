@@ -1,5 +1,5 @@
-
 #include "t_octree.h"
+#include <cstdlib>
 
 int t_octree_insert(TOctreeNode* octree, float* data)
 {
