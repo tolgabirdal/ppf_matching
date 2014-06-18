@@ -58,6 +58,8 @@ inline T  max2( T t1, T t2 )
 }
 #endif /* MIN_MAX */
 
+#include <cstdio>
+
 template <class T>
 inline void     gdiam_exchange( T   & a, T    & b )
 {
