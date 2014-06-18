@@ -2,8 +2,8 @@
 #ifndef __HELPERS_H_
 #define __HELPERS_H_
 
-#include <opencv2/core.hpp>
-#include <opencv2/flann.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/flann/flann.hpp>
 #include "t_octree.h"
 
 using namespace cv;

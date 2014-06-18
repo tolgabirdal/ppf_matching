@@ -4,7 +4,6 @@
 #include <vector>
 #include <time.h>
 #include <fstream>
-#include <opencv2/flann.hpp>
 
 
 using namespace std;

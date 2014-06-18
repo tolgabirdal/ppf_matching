@@ -1,29 +1,13 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
-/*#include "opencv2/features2d.hpp"
-#include "opencv2/nonfree.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"*/
-#include "opencv2/core.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/rgbd.hpp"
-#include "opencv2/flann.hpp"
+#include <opencv2/opencv.hpp>
 #include "helpers.h"
 #include "visualize_win.h"
 #include "c_utils.h"
 #include "hash_murmur.h"
-#include "THashInt.h"
 #include <tommy.h>
-
-#include <Eigen/Core>
-#include "opencv2/core/eigen.hpp"
-
-
 
 using namespace cv;
 
