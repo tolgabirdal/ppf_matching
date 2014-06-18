@@ -1,0 +1,11 @@
+#Visual Studio files
+*.exe
+*.ilk
+*.pdb
+*.obj
+*.manifest
+*.manifest.res
+*.dep
+
+#QtCreator project file
+*.txt.user
