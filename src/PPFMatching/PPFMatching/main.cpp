@@ -192,7 +192,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
 	Mat sampled = sample_pc_octree(PC, xRange, yRange, zRange, sampling_step_relative);
 
-	float angleStepRadians = (360/angle_step_relative)*PI/180;
+    float angleStepRadians = (360/angle_step_relative)*M_PI/180;
 
 	tommy_hashtable* hashTable = (tommy_hashtable*)malloc(sizeof(tommy_hashtable));
 	// 262144 = 2^18
