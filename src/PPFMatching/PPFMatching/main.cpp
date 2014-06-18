@@ -14,6 +14,7 @@
 #include "opencv2/rgbd.hpp"
 #include "opencv2/flann.hpp"
 #include "helpers.h"
+#include "visualize_win.h"
 #include "c_utils.h"
 #include "hash_murmur.h"
 #include "THashInt.h"
@@ -392,7 +393,9 @@ int main_octree_sampling()
 
 	Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, 0.05);
 
+#ifdef _MSV_VER
 	visualize_pc(sampled, 0, 1, 0, "Point Cloud");
+#endif
 
 	return 0;
 }
@@ -407,7 +410,9 @@ int main_octree_vis()
 	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 
+#ifdef _MSV_VER
 	visualize_pc(pc, useNormals, withBbox, withOctree, "Point Cloud");
+#endif
 
 	return 0;
 }
@@ -492,7 +497,9 @@ int main_bbox()
 
 	printf("Bounding box -- x: (%f, %f), y: (%f, %f), z: (%f, %f)\n", xRange[0], xRange[1], yRange[0], yRange[1], zRange[0], zRange[1]);
 
+#ifdef _MSV_VER
 	visualize_pc(pc, useNormals, withBbox, 0, "Point Cloud");
+#endif
 
 	return 0;
 }
@@ -510,9 +517,12 @@ int main_ply()
 	
 	Mat spc1 = sample_pc_uniform(pc, numVert/350);
 	Mat spc2 = sample_pc_random(pc, 350);
+
+#ifdef _MSV_VER
 	visualize_pc(pc, useNormals, withBbox, 0, "PC1");
 	visualize_pc(spc1, useNormals, withBbox, 0, "Uniform Sampled");
 	visualize_pc(spc2, useNormals, withBbox, 0, "Random Sampled");
+#endif
 
 	return 0;
 }
