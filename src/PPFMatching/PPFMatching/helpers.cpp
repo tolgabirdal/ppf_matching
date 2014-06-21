@@ -6,7 +6,7 @@
 #include <vector>
 #include <time.h>
 #include <fstream>
-#include <opencv2/flann.hpp>
+#include <opencv2/flann/flann.hpp>
 
 #include "gl_utils.h"
 

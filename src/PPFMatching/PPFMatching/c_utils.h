@@ -53,6 +53,14 @@ extern "C" {
 		R[8] = A[6] * B[2] + A[7] * B[5] + A[8] * B[8];            
 	}
 
+	// A is a vector
+	static __inline void vector_matrix_product33(double *A, double *B, double *R)
+	{
+		R[0] = A[0] * B[0] + A[1] * B[3] + A[2] * B[6];
+		R[1] = A[0] * B[1] + A[1] * B[4] + A[2] * B[7];
+		R[2] = A[0] * B[2] + A[1] * B[5] + A[2] * B[8];            
+	}
+
 	/*static __inline int next_power_of_two(int x)
 	{
 		return (int)pow(2.0, ceil(log((double)x)/log(2.0)));;
