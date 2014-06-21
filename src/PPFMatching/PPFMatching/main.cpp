@@ -28,7 +28,7 @@ using namespace cv;
 
 typedef struct THash {
 	int id;
-	void* data;
+	int i, j;
 	tommy_node node;
 } THash;
 
@@ -44,7 +44,7 @@ public:
 	Mat inputPC, PPF;
 	cvflann::Index<Distance_32F>* flannIndex;
 	//Mat alpha_m;
-	int n;
+	int n, sampledStep;
 	tommy_hashtable* hashTable;
 //	hashtable_int* hashTable;
 };
@@ -224,6 +224,8 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	*Model3D = new TPPFModelPC();
 	(*Model3D)->PPF = Mat(sampled.rows*sampled.rows, T_PPF_LENGTH, CV_32FC1);
 
+	int sampledStep = sampled.step;
+
 	for (int i=0; i<sampled.rows; i++)
 	{
 		for (int j=0; j<sampled.rows; j++)
@@ -231,8 +233,8 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 			// cannnot compute the ppf with myself
 			if (i!=j)
 			{
-				float* f1 = (float*)(&sampled.data[i * sampled.step]);
-				float* f2 = (float*)(&sampled.data[j * sampled.step]);
+				float* f1 = (float*)(&sampled.data[i * sampledStep]);
+				float* f2 = (float*)(&sampled.data[j * sampledStep]);
 				const double p1[4] = {f1[0], f1[1], f1[2], 0};
 				const double p2[4] = {f2[0], f1[1], f1[2], 0};
 				const double n1[4] = {f1[3], f1[4], f1[5], 0};
@@ -242,7 +244,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 				compute_ppf_features(p1, n1, p2, n2, f);
 				unsigned int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
 				double alpha = compute_alpha(p1, n1, p2);
-				unsigned int corrInd = i*sampled.step+j;
+				unsigned int corrInd = i*sampledStep+j;
 
 				//hashtable_int_insert(hashTable, hash, (void*)corrInd);
 				//printf("%f %f %f %f \n", f[0], f[1], f[2], f[3]);
@@ -250,7 +252,9 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
 				THash* hashNode = (THash*)calloc(1, sizeof(THash));
 				hashNode->id = hash;
-				hashNode->data = (void*)corrInd;
+				//hashNode->data = (void*)corrInd;
+				hashNode->i = i;
+				hashNode->j = j;
 				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashNode->id));
 
 				(*Model3D)->PPF.data[ corrInd ] = f[0];
@@ -300,6 +304,7 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 	cvflann::Index<Distance_32F>* flannIndex;
 	float angleStepRadians = ppfModel->angleStep;
 	float distanceStep = ppfModel->distStep;
+	int sampledStep = ppfModel->sampledStep;
 
 	// allocate the accumulator
 	accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
@@ -367,10 +372,13 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 				int numNodes = 0;
 				while (node)
 				{
-					int corrInd = (int)node->data;
+					int corrI = (int)node->i;
+					int corrJ = (int)node->j;
+					int corrInd = (int)node->i*sampledStep+j;
 					float* ppfCorrScene = (float*)(&ppfModel->PPF.data[corrInd]);
 					double alpha_model = (double)ppfCorrScene[4];
 					double alpha = alpha_scene - alpha_model;
+					unsigned int hashInd = i*n+j;
 					
 
 					/*  Map alpha to the indices:
@@ -383,7 +391,7 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 					int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 
 
-					unsigned int accIndex = corrInd * n + alpha_index;
+					unsigned int accIndex = hashInd * n + alpha_index;
 					accumulator[accIndex]++;
 					node=node->next;
 					numNodes++;
