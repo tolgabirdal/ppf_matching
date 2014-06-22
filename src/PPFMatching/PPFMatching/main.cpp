@@ -22,6 +22,7 @@
 #include "helpers.h"
 #include "visualize_win.h"
 #include "c_utils.h"
+#include "THashInt.h"
 #include "hash_murmur.h"
 #include <tommy.h>
 
