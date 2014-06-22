@@ -28,6 +28,8 @@
 
 #else   // defined(_MSC_VER)
 
+#define TLong long
+
 #define FORCE_INLINE __attribute__((always_inline))
 
 inline int rotl32 ( int x, int8_t r )
