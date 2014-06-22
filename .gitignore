@@ -12,6 +12,7 @@
 *.com
 *.class
 *.dll
+*.lib
 *.o
 *.so
 
