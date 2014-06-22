@@ -1,0 +1,35 @@
+#Visual Studio files
+*.exe
+*.ilk
+*.pdb
+*.obj
+*.manifest
+*.manifest.res
+*.dep
+
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.o
+*.so
+
+#QtCreator project file
+*.txt.user
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+ 
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

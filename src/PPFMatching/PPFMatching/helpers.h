@@ -15,7 +15,6 @@ extern "C" {
 #endif
 
 	Mat load_ply_simple(const char* fileName, int numVertices, int withNormals);
-	void* visualize_pc(Mat cloud, int withNormals, int withBbox, int withOctree, char* Title);
 	
 	Mat sample_pc_uniform(Mat PC, int sampleStep);
 	Mat sample_pc_perfect_uniform(Mat PC, int sampleStep);
