@@ -30,9 +30,26 @@ using namespace cv;
 
 typedef struct THash {
 	int id;
-	int i, j;
+	int i, j, ppfInd;
 	tommy_node node;
 } THash;
+
+class PPFPose
+{
+public:
+	PPFPose(){alpha=0; modelIndex=0; numVotes=0;};
+	PPFPose(double Alpha =0, unsigned int ModelIndex=0, unsigned int NumVotes=0)
+	{
+		alpha = Alpha;
+		modelIndex = ModelIndex;
+		numVotes = NumVotes;
+	};
+	~PPFPose(){};
+
+	double alpha;
+	unsigned int modelIndex;
+	unsigned int numVotes;
+};
 
 class TPPFModelPC
 {
@@ -46,7 +63,7 @@ public:
 	Mat inputPC, PPF;
 	cvflann::Index<Distance_32F>* flannIndex;
 	//Mat alpha_m;
-	int n, sampledStep;
+	int n, numRefPoints, sampledStep, ppfStep;
 	tommy_hashtable* hashTable;
 //	hashtable_int* hashTable;
 };
@@ -224,12 +241,15 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	//hashtable_int* hashTable = hashtable_int_create(sampled.rows*sampled.rows, NULL);
 	
 	*Model3D = new TPPFModelPC();
-	int sampledStep = sampled.rows*sampled.rows;
 
-	(*Model3D)->PPF = Mat(sampledStep, T_PPF_LENGTH, CV_32FC1);
-
-
-	for (int i=0; i<sampled.rows; i++)
+	int numPPF = sampled.rows*sampled.rows;
+	(*Model3D)->PPF = Mat(numPPF, T_PPF_LENGTH, CV_32FC1);
+	int ppfStep = (*Model3D)->PPF.step;
+	int sampledStep = sampled.step;
+	
+	// TODO: Maybe I could sample 1/5th of them here. Check the performance later.
+	int numRefPoints = sampled.rows;
+	for (int i=0; i<numRefPoints; i++)
 	{
 		for (int j=0; j<sampled.rows; j++)
 		{
@@ -247,7 +267,8 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 				compute_ppf_features(p1, n1, p2, n2, f);
 				unsigned int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
 				double alpha = compute_alpha(p1, n1, p2);
-				unsigned int corrInd = i*sampledStep+j;
+				unsigned int corrInd = i*numRefPoints+j;
+				unsigned int ppfInd = corrInd*ppfStep;
 
 				//hashtable_int_insert(hashTable, hash, (void*)corrInd);
 				//printf("%f %f %f %f \n", f[0], f[1], f[2], f[3]);
@@ -258,13 +279,15 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 				//hashNode->data = (void*)corrInd;
 				hashNode->i = i;
 				hashNode->j = j;
+				hashNode->ppfInd = ppfInd;
 				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashNode->id));
 
-				(*Model3D)->PPF.data[ corrInd ] = f[0];
-				(*Model3D)->PPF.data[ corrInd + 1 ] = f[1];
-				(*Model3D)->PPF.data[ corrInd + 2 ] = f[2];
-				(*Model3D)->PPF.data[ corrInd + 3 ] = f[3];
-				(*Model3D)->PPF.data[ corrInd + 4 ] = (float)alpha;
+				float* ppfRow = (float*)(&(*Model3D)->PPF.data[ ppfInd ]);
+				ppfRow[0] = f[0];
+				ppfRow[1] = f[1];
+				ppfRow[2] = f[2];
+				ppfRow[3] = f[3];
+				ppfRow[4] = (float)alpha;
 			}
 		}
 	}
@@ -275,7 +298,9 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	(*Model3D)->distStep = distanceStep;
 	(*Model3D)->hashTable = hashTable;
 	(*Model3D)->sampledStep = sampledStep;
-	//(*Model3D)->PPF = PPFMat.;
+	(*Model3D)->ppfStep = ppfStep;
+	(*Model3D)->numRefPoints = numRefPoints;
+	//(*Model3D)->PPF = PPFMat;
 
 	//(*Model3D)->magic=T_MAGIC_VAL_PC_MODEL;
 
@@ -301,13 +326,14 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 	int numAngles = (int) (floor (2 * M_PI / ppfModel->angleStep));
 	int max_votes_i = 0, max_votes_j = 0;
 	int max_votes = 0;
-	double f1, f2, f3, f4;
 	unsigned int* accumulator;
-	unsigned int n = ppfModel->PPF.rows;
 	cvflann::Index<Distance_32F>* flannIndex;
 	float angleStepRadians = ppfModel->angleStep;
 	float distanceStep = ppfModel->distStep;
 	int sampledStep = ppfModel->sampledStep;
+	int ppfStep = ppfModel->ppfStep;
+	int numRefPoints = ppfModel->numRefPoints;
+	unsigned int n = numRefPoints;
 
 	// allocate the accumulator
 	accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
@@ -320,6 +346,8 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 	cvflann::Matrix<int> indices((int*) ind.data, ind.rows, ind.cols);
 	cvflann::Matrix<float> dists(new float[pc.rows*numNeighbors], pc.rows, numNeighbors);
 
+	// TODO: Can be parallelized!
+#pragma omp parallel for
 	for (i = 0; i < pc.rows; i += 15)
 	{
 		int j;
@@ -331,6 +359,9 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 		double row1[3]={0}, row2[3]={0}, row3[3]={0}, Tsg[3]={0};
 
 		compute_transform_rt_yz(p1, n1, row2, row3, Tsg);
+
+		// invert Tsg : We will need this
+		
 		
 		//compute_transform_rt(psr, nsr, row1, row2, row3, Tsg);
 
@@ -360,7 +391,7 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 				if ( alpha_scene != alpha_scene)
 				{
 					printf("NaN value!\n");
-					return ;
+					//return ;
 				}
 
 				if (sin(alpha_scene)*p2t[2]<0.0)
@@ -377,12 +408,13 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 				{
 					THash* tData = (THash*) node->data;
 					int corrI = (int)tData->i;
-					int corrJ = (int)tData->j;
-					int corrInd = (int)tData->i*sampledStep+j;
-					float* ppfCorrScene = (float*)(&ppfModel->PPF.data[corrInd]);
+					//int corrJ = (int)tData->j;
+					int ppfInd = (int)tData->ppfInd;
+					//int corrInd = (int)tData->i*sampledStep+j;
+					float* ppfCorrScene = (float*)(&ppfModel->PPF.data[ppfInd]);
 					double alpha_model = (double)ppfCorrScene[4];
 					double alpha = alpha_scene - alpha_model;
-					unsigned int hashInd = i*n+j;
+					//unsigned int hashInd = corrI*numRefPoints + corrJ;
 					
 
 					/*  Map alpha to the indices:
@@ -394,10 +426,11 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 					
 					int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 
-
-					unsigned int accIndex = hashInd * n + alpha_index;
+					unsigned int accIndex = corrI * numAngles + alpha_index;
+#pragma omp atomic
 					accumulator[accIndex]++;
-					node=node->next;
+
+					node = node->next;
 					numNodes++;
 				}
 				//tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashNode->id));
@@ -406,9 +439,53 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 			}
 		}
 
+		// now maximize the accumulator
 
+		for (int i = 0; i < n; ++i)
+		{
+			for (int j = 0; j < numAngles; ++j)
+			{
+				int accInd = i*numAngles + j;
+				const int accVal = accumulator[ accInd ];
+				if (accVal > max_votes)
+				{
+					max_votes = accVal;
+					max_votes_i = i;
+					max_votes_j = j;
+				}
+				// Reset accumulator_array for the next set of iterations with a new scene reference point
+				accumulator[accInd ] = 0;
+			}
+		}
+
+		printf("Model Reference: %d, Alpha Index: %d\n", max_votes_i, max_votes_j);
+
+		// TODO : Compute pose
+		/*Eigen::Vector3f model_reference_point = input_->points[max_votes_i].getVector3fMap (),
+			model_reference_normal = input_->points[max_votes_i].getNormalVector3fMap ();
+		Eigen::AngleAxisf rotation_mg (acosf (model_reference_normal.dot (Eigen::Vector3f::UnitX ())), model_reference_normal.cross (Eigen::Vector3f::UnitX ()).normalized ());
+		Eigen::Affine3f transform_mg = Eigen::Translation3f ( rotation_mg * ((-1) * model_reference_point)) * rotation_mg;
+		Eigen::Affine3f max_transform = 
+			transform_sg.inverse () * 
+			Eigen::AngleAxisf ((static_cast<float> (max_votes_j) - floorf (static_cast<float> (M_PI) / search_method_->getAngleDiscretizationStep ())) * search_method_->getAngleDiscretizationStep (), Eigen::Vector3f::UnitX ()) * 
+			transform_mg;
+*/
+		float* fMax = (float*)(&pc.data[max_votes_i * pc.step]);
+		const double pMax[4] = {f1[0], f1[1], f1[2], 0};
+		const double nMax[4] = {f1[3], f1[4], f1[5], 0};
+		double Tmg[3], pose[4][4];
+
+		// convert alpha_index to alpha
+		int alpha_index = max_votes_j;
+
+
+		//compute_transform_rt_yz(p1, n1, row2, row3, Tmg);
+
+
+
+
+		//PPFPose
 	}
-	
 }
 
 int main()
@@ -525,7 +602,7 @@ int main_octree()
 
 	t_octree_query_in_bbox(&oc, range, range, range, resultsOT);
 
-	for(int i=0; i<resultsOT.size(); ++i) 
+	for(unsigned int i=0; i<resultsOT.size(); ++i) 
 	{
 		float* rot = resultsOT[i];
 		printf("%f %f %f\n", rot[0], rot[1], rot[2]);

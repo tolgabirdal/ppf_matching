@@ -123,6 +123,7 @@ void* index_pc_flann(Mat pc, cvflann::Matrix<float>& data)
 	return (void*)flannIndex;
 }	
 
+// not yet complete
 Mat sample_pc_kd_tree(Mat pc, float radius, int numNeighbors)
 {
 	cvflann::AutotunedIndexParams params;

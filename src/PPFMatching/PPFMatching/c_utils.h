@@ -4,6 +4,10 @@
 
 #define EPS		1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
 
+#ifndef M_PI
+#define M_PI             PI
+#endif
+
 // Useful Macros
 #define TNorm3(v) (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))
 
