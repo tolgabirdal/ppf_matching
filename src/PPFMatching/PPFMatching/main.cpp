@@ -222,9 +222,10 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	//hashtable_int* hashTable = hashtable_int_create(sampled.rows*sampled.rows, NULL);
 	
 	*Model3D = new TPPFModelPC();
-	(*Model3D)->PPF = Mat(sampled.rows*sampled.rows, T_PPF_LENGTH, CV_32FC1);
+	int sampledStep = sampled.rows*sampled.rows;
 
-	int sampledStep = sampled.step;
+	(*Model3D)->PPF = Mat(sampledStep, T_PPF_LENGTH, CV_32FC1);
+
 
 	for (int i=0; i<sampled.rows; i++)
 	{
@@ -372,9 +373,10 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 				int numNodes = 0;
 				while (node)
 				{
-					int corrI = (int)node->i;
-					int corrJ = (int)node->j;
-					int corrInd = (int)node->i*sampledStep+j;
+					THash* tData = (THash*) node->data;
+					int corrI = (int)tData->i;
+					int corrJ = (int)tData->j;
+					int corrInd = (int)tData->i*sampledStep+j;
 					float* ppfCorrScene = (float*)(&ppfModel->PPF.data[corrInd]);
 					double alpha_model = (double)ppfCorrScene[4];
 					double alpha = alpha_scene - alpha_model;
