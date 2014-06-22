@@ -461,15 +461,6 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 		printf("Model Reference: %d, Alpha Index: %d\n", max_votes_i, max_votes_j);
 
 		// TODO : Compute pose
-		/*Eigen::Vector3f model_reference_point = input_->points[max_votes_i].getVector3fMap (),
-			model_reference_normal = input_->points[max_votes_i].getNormalVector3fMap ();
-		Eigen::AngleAxisf rotation_mg (acosf (model_reference_normal.dot (Eigen::Vector3f::UnitX ())), model_reference_normal.cross (Eigen::Vector3f::UnitX ()).normalized ());
-		Eigen::Affine3f transform_mg = Eigen::Translation3f ( rotation_mg * ((-1) * model_reference_point)) * rotation_mg;
-		Eigen::Affine3f max_transform = 
-			transform_sg.inverse () * 
-			Eigen::AngleAxisf ((static_cast<float> (max_votes_j) - floorf (static_cast<float> (M_PI) / search_method_->getAngleDiscretizationStep ())) * search_method_->getAngleDiscretizationStep (), Eigen::Vector3f::UnitX ()) * 
-			transform_mg;
-*/
 		float* fMax = (float*)(&pc.data[max_votes_i * pc.step]);
 		const double pMax[4] = {f1[0], f1[1], f1[2], 0};
 		const double nMax[4] = {f1[3], f1[4], f1[5], 0};
