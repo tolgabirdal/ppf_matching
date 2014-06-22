@@ -347,7 +347,9 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 	cvflann::Matrix<float> dists(new float[pc.rows*numNeighbors], pc.rows, numNeighbors);
 
 	// TODO: Can be parallelized!
+#if defined T_OPENMP
 #pragma omp parallel for
+#endif
 	for (i = 0; i < pc.rows; i += 15)
 	{
 		int j;
@@ -361,9 +363,8 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 		compute_transform_rt_yz(p1, n1, row2, row3, Tsg);
 
 		// invert Tsg : We will need this
+		// Luckily rotation is orthogonal: Inverse = Transpose.		
 		
-		
-		//compute_transform_rt(psr, nsr, row1, row2, row3, Tsg);
 
 		// This is a later issue: We might want to look into a local neighborhood only
 		// flannIndex->radiusSearch(data, indices, dists, radius, searchParams);
@@ -427,7 +428,9 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 					int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 
 					unsigned int accIndex = corrI * numAngles + alpha_index;
+#if defined T_OPENMP
 #pragma omp atomic
+#endif
 					accumulator[accIndex]++;
 
 					node = node->next;
@@ -514,7 +517,7 @@ int main_octree_sampling()
 
 	Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, 0.05);
 
-#ifdef _MSV_VER
+#ifdef _MSC_VER
 	visualize_pc(sampled, 0, 1, 0, "Point Cloud");
 #endif
 
@@ -531,7 +534,7 @@ int main_octree_vis()
 	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 
-#ifdef _MSV_VER
+#ifdef _MSC_VER
 	visualize_pc(pc, useNormals, withBbox, withOctree, "Point Cloud");
 #endif
 
@@ -618,7 +621,7 @@ int main_bbox()
 
 	printf("Bounding box -- x: (%f, %f), y: (%f, %f), z: (%f, %f)\n", xRange[0], xRange[1], yRange[0], yRange[1], zRange[0], zRange[1]);
 
-#ifdef _MSV_VER
+#ifdef _MSC_VER
 	visualize_pc(pc, useNormals, withBbox, 0, "Point Cloud");
 #endif
 
@@ -639,7 +642,7 @@ int main_ply()
 	Mat spc1 = sample_pc_uniform(pc, numVert/350);
 	Mat spc2 = sample_pc_random(pc, 350);
 
-#ifdef _MSV_VER
+#ifdef _MSC_VER
 	visualize_pc(pc, useNormals, withBbox, 0, "PC1");
 	visualize_pc(spc1, useNormals, withBbox, 0, "Uniform Sampled");
 	visualize_pc(spc2, useNormals, withBbox, 0, "Random Sampled");
