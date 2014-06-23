@@ -167,13 +167,6 @@ int matrix_invert44(const double m[16], double invOut[16])
     return 1;
 }
 
-void matrix_product331(const double A[9], const double b[3], double r[3])
-{
-	r[0] = A[0] * b[0] + A[1] * b[1] + A[2] * b[2];
-	r[1] = A[3] * b[0] + A[4] * b[1] + A[5] * b[2];
-	r[2] = A[6] * b[0] + A[7] * b[1] + A[8] * b[2];
-}
-
 void matrix_product332(const double A[9], const double b[3], double r[3])
 {
 	r[0] = A[0] * b[0] + A[3] * b[1] + A[6] * b[2];
@@ -181,28 +174,6 @@ void matrix_product332(const double A[9], const double b[3], double r[3])
 	r[2] = A[2] * b[0] + A[5] * b[1] + A[8] * b[2];
 }
 
-void matrix_product44(const double A[16], const double B[16], double R[16])
-{
-    R[0] = A[0] * B[0] + A[1] * B[4] + A[2] * B[8] + A[3] * B[12];
-    R[1] = A[0] * B[1] + A[1] * B[5] + A[2] * B[9] + A[3] * B[13];
-    R[2] = A[0] * B[2] + A[1] * B[6] + A[2] * B[10] + A[3] * B[14];
-    R[3] = A[0] * B[3] + A[1] * B[7] + A[2] * B[11] + A[3] * B[15];
-    
-    R[4] = A[4] * B[0] + A[5] * B[4] + A[6] * B[8] + A[7] * B[12];
-    R[5] = A[4] * B[1] + A[5] * B[5] + A[6] * B[9] + A[7] * B[13];
-    R[6] = A[4] * B[2] + A[5] * B[6] + A[6] * B[10] + A[7] * B[14];
-    R[7] = A[4] * B[3] + A[5] * B[7] + A[6] * B[11] + A[7] * B[15];
-
-    R[8] = A[8] * B[0] + A[9] * B[4] + A[10] * B[8] + A[11] * B[12];
-    R[9] = A[8] * B[1] + A[9] * B[5] + A[10] * B[9] + A[11] * B[13];
-    R[10] = A[8] * B[2] + A[9] * B[6] + A[10] * B[10] + A[11] * B[14];
-    R[11] = A[8] * B[3] + A[9] * B[7] + A[10] * B[11] + A[11] * B[15];
-
-    R[12] = A[12] * B[0] + A[13] * B[4] + A[14] * B[8] + A[15] * B[12];
-    R[13] = A[12] * B[1] + A[13] * B[5] + A[14] * B[9] + A[15] * B[13];
-    R[14] = A[12] * B[2] + A[13] * B[6] + A[14] * B[10] + A[15] * B[14];
-    R[15] = A[12] * B[3] + A[13] * B[7] + A[14] * B[11] + A[15] * B[15];
-}
 
 double matrix_determinant3(double *A)
 {

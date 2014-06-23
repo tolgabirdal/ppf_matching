@@ -37,18 +37,32 @@ typedef struct THash {
 class PPFPose
 {
 public:
-	PPFPose(){alpha=0; modelIndex=0; numVotes=0;};
+	PPFPose()
+	{
+		alpha=0; 
+		modelIndex=0; 
+		numVotes=0;
+
+		for (int i=0; i<16; i++)
+			Pose[i]=0;
+	};
+
 	PPFPose(double Alpha =0, unsigned int ModelIndex=0, unsigned int NumVotes=0)
 	{
 		alpha = Alpha;
 		modelIndex = ModelIndex;
 		numVotes = NumVotes;
+
+		for (int i=0; i<16; i++)
+			Pose[i]=0;
 	};
+
 	~PPFPose(){};
 
 	double alpha;
 	unsigned int modelIndex;
 	unsigned int numVotes;
+	double Pose[16];
 };
 
 class TPPFModelPC
@@ -60,6 +74,7 @@ public:
 
 	int magic;
 	double maxDist, angleStep, distStep;
+	double sampling_step_relative;
 	Mat inputPC, PPF;
 	cvflann::Index<Distance_32F>* flannIndex;
 	//Mat alpha_m;
@@ -113,7 +128,20 @@ void compute_ppf_features(const double p1[4], const double n1[4],
 
 	TAngle3(n1, d, c, f[0]);
 	TAngle3(n2, d, c, f[1]);
-	TAngle3(n1, n1, c, f[2]);
+	TAngle3(n1, n2, c, f[2]);
+
+	// We need angles in range [0;pi]
+	// TAngle3 already provides that.
+	
+	// If not, revert to range [0;pi]
+	/*if (f[0]<0)
+		f[0]+=M_PI;
+
+	if (f[1]<0)
+		f[1]+=M_PI;
+
+	if (f[2]<0)
+		f[2]+=M_PI;*/
 }
 
 // simple hashing
@@ -231,7 +259,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
 	Mat sampled = sample_pc_octree(PC, xRange, yRange, zRange, sampling_step_relative);
 
-    float angleStepRadians = (360/angle_step_relative)*M_PI/180;
+    double angleStepRadians = (360.0/angle_step_relative)*PI/180.0;
 
 	tommy_hashtable* hashTable = (tommy_hashtable*)malloc(sizeof(tommy_hashtable));
 	// 262144 = 2^18
@@ -251,17 +279,19 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	int numRefPoints = sampled.rows;
 	for (int i=0; i<numRefPoints; i++)
 	{
+		float* f1 = (float*)(&sampled.data[i * sampledStep]);
+		const double p1[4] = {f1[0], f1[1], f1[2], 0};
+		const double n1[4] = {f1[3], f1[4], f1[5], 0};
+
+		//printf("///////////////////// NEW REFERENCE ////////////////////////\n");
 		for (int j=0; j<sampled.rows; j++)
 		{
 			// cannnot compute the ppf with myself
 			if (i!=j)
 			{
-				float* f1 = (float*)(&sampled.data[i * sampledStep]);
 				float* f2 = (float*)(&sampled.data[j * sampledStep]);
-				const double p1[4] = {f1[0], f1[1], f1[2], 0};
-				const double p2[4] = {f2[0], f1[1], f1[2], 0};
-				const double n1[4] = {f1[3], f1[4], f1[5], 0};
-				const double n2[4] = {f2[3], f1[4], f1[5], 0};
+				const double p2[4] = {f2[0], f2[1], f2[2], 0};
+				const double n2[4] = {f2[3], f2[4], f2[5], 0};
 
 				double f[4]={0};
 				compute_ppf_features(p1, n1, p2, n2, f);
@@ -272,7 +302,8 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
 				//hashtable_int_insert(hashTable, hash, (void*)corrInd);
 				//printf("%f %f %f %f \n", f[0], f[1], f[2], f[3]);
-				//printf("%d\n", hash);
+				//printf("F:%f, %f, %f, %f .... Alpha: %f, Hash: %d\n", f[0], f[1], f[2], f[3], alpha, hash);
+				//printf("Alpha: %f\n", alpha);
 
 				THash* hashNode = (THash*)calloc(1, sizeof(THash));
 				hashNode->id = hash;
@@ -300,13 +331,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	(*Model3D)->sampledStep = sampledStep;
 	(*Model3D)->ppfStep = ppfStep;
 	(*Model3D)->numRefPoints = numRefPoints;
-	//(*Model3D)->PPF = PPFMat;
-
-	//(*Model3D)->magic=T_MAGIC_VAL_PC_MODEL;
-
-
-
-	//return compute_ppf_pc_train(pc, distanceStep, angleStepRadians);
+	(*Model3D)->sampling_step_relative = sampling_step_relative;
 	
 	return Mat();
 }
@@ -316,6 +341,11 @@ Mat t_load_ppf_model(const char* FileName)
 	Mat ppf = Mat();
 
 	return ppf;
+}
+
+PPFPose* cluster_poses(PPFPose** poseList)
+{
+	
 }
 
 void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppfModel)
@@ -334,46 +364,62 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 	int ppfStep = ppfModel->ppfStep;
 	int numRefPoints = ppfModel->numRefPoints;
 	unsigned int n = numRefPoints;
+	PPFPose** poseList;
+	int sceneSamplingStep = 5, c = 0;
+
+	// compute bbox
+	float xRange[2], yRange[2], zRange[2];
+	compute_obb(pc, xRange, yRange, zRange);
+	// sample the point cloud
+	float sampling_step_relative = (float)ppfModel->sampling_step_relative;
+	float dx = xRange[1] - xRange[0];
+	float dy = yRange[1] - yRange[0];
+	float dz = zRange[1] - zRange[0];
+	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
+	float distanceSampleStep = diameter * sampling_step_relative;
+	//Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, distanceSampleStep);
+	Mat sampled = pc.clone();
 
 	// allocate the accumulator
 	accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
-	
+	poseList = (PPFPose**)calloc((sampled.rows/sceneSamplingStep), sizeof(PPFPose*));
+
+	//vector<PPFPose*> poseList;
+	//poseList.clear();
 	
 	// obtain the tree representation for fast search
-	flannIndex  = (cvflann::Index<Distance_32F>*)index_pc_flann(pc, data);
+	flannIndex  = (cvflann::Index<Distance_32F>*)index_pc_flann(sampled, data);
 
-	cv::Mat1i ind(pc.rows, numNeighbors);
+	cv::Mat1i ind(sampled.rows, numNeighbors);
 	cvflann::Matrix<int> indices((int*) ind.data, ind.rows, ind.cols);
-	cvflann::Matrix<float> dists(new float[pc.rows*numNeighbors], pc.rows, numNeighbors);
+	cvflann::Matrix<float> dists(new float[sampled.rows*numNeighbors], sampled.rows, numNeighbors);
 
 	// TODO: Can be parallelized!
 #if defined T_OPENMP
 #pragma omp parallel for
 #endif
-	for (i = 0; i < pc.rows; i += 15)
+	for (i = 0; i < sampled.rows; i += sceneSamplingStep)
 	{
 		int j;
 
-		float* f1 = (float*)(&pc.data[i * pc.step]);
+		float* f1 = (float*)(&sampled.data[i * sampled.step]);
 		const double p1[4] = {f1[0], f1[1], f1[2], 0};
 		const double n1[4] = {f1[3], f1[4], f1[5], 0};
 		double p1t[4];
-		double row1[3]={0}, row2[3]={0}, row3[3]={0}, Tsg[3]={0};
+		double *row1, *row2, *row3, tsg[3]={0}, Rsg[9]={0}, RInv[9]={0};
 
-		compute_transform_rt_yz(p1, n1, row2, row3, Tsg);
-
-		// invert Tsg : We will need this
-		// Luckily rotation is orthogonal: Inverse = Transpose.		
-		
+		//compute_transform_rt_yz(p1, n1, row2, row3, tsg);
+		compute_transform_rt(p1, n1, Rsg, tsg);
+		row1=&Rsg[0]; row2=&Rsg[3]; row3=&Rsg[6];
 
 		// This is a later issue: We might want to look into a local neighborhood only
 		// flannIndex->radiusSearch(data, indices, dists, radius, searchParams);
 
-		for (j = 0; j < pc.rows; j ++)
+		for (j = 0; j < sampled.rows; j ++)
 		{
 			if (i!=j)
 			{
-				float* f2 = (float*)(&pc.data[j * pc.step]);
+				float* f2 = (float*)(&sampled.data[j * sampled.step]);
 				const double p2[4] = {f2[0], f2[1], f2[2], 0};
 				const double n2[4] = {f2[3], f2[4], f2[5], 0};
 				double p2t[4], alpha_scene;
@@ -382,10 +428,10 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 				compute_ppf_features(p1, n1, p2, n2, f);
 				unsigned int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
 
-				// we don't need to call this here, as we already estimate the Tsg from scene reference point
+				// we don't need to call this here, as we already estimate the tsg from scene reference point
 				//double alpha = compute_alpha(p1, n1, p2);
-				p2t[1] = Tsg[1] + row2[0] * p2[0] + row2[1] * p2[1] + row2[2] * p2[2];
-				p2t[2] = Tsg[2] + row3[0] * p2[0] + row3[1] * p2[1] + row3[2] * p2[2];
+				p2t[1] = tsg[1] + row2[0] * p2[0] + row2[1] * p2[1] + row2[2] * p2[2];
+				p2t[2] = tsg[2] + row3[0] * p2[0] + row3[1] * p2[1] + row3[2] * p2[2];
 
 				alpha_scene=atan2(-p2t[2], p2t[1]);
 
@@ -413,7 +459,7 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 					int ppfInd = (int)tData->ppfInd;
 					//int corrInd = (int)tData->i*sampledStep+j;
 					float* ppfCorrScene = (float*)(&ppfModel->PPF.data[ppfInd]);
-					double alpha_model = (double)ppfCorrScene[4];
+					double alpha_model = (double)ppfCorrScene[T_PPF_LENGTH-1];
 					double alpha = alpha_scene - alpha_model;
 					//unsigned int hashInd = corrI*numRefPoints + corrJ;
 					
@@ -436,41 +482,92 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 					node = node->next;
 					numNodes++;
 				}
-				//tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashNode->id));
-
 				//printf("%d\n", numNodes);
 			}
 		}
 
-		// now maximize the accumulator
-
+		// Maximize the accumulator
 		for (int i = 0; i < n; ++i)
 		{
 			for (int j = 0; j < numAngles; ++j)
 			{
-				int accInd = i*numAngles + j;
-				const int accVal = accumulator[ accInd ];
+				const unsigned int accInd = i*numAngles + j;
+				const unsigned int accVal = accumulator[ accInd ];
 				if (accVal > max_votes)
 				{
 					max_votes = accVal;
 					max_votes_i = i;
 					max_votes_j = j;
 				}
-				// Reset accumulator_array for the next set of iterations with a new scene reference point
+				
 				accumulator[accInd ] = 0;
 			}
 		}
 
-		printf("Model Reference: %d, Alpha Index: %d\n", max_votes_i, max_votes_j);
+
+		// invert Tsg : Luckily rotation is orthogonal: Inverse = Transpose.
+		// We are not required to invert.
+		double tInv[3], tmg[3], Rmg[9], Ralpha[9];
+		matrix_transpose33(Rsg, RInv);
+		matrix_product331(RInv, tsg, tInv);
+
+		double TsgInv[16] =	{	RInv[0], RInv[1], RInv[2], -tInv[0],
+								RInv[3], RInv[4], RInv[5], -tInv[1],
+								RInv[6], RInv[7], RInv[8], -tInv[2],
+								0, 0, 0, 1
+								};
 
 		// TODO : Compute pose
-		float* fMax = (float*)(&pc.data[max_votes_i * pc.step]);
-		const double pMax[4] = {f1[0], f1[1], f1[2], 0};
-		const double nMax[4] = {f1[3], f1[4], f1[5], 0};
-		double Tmg[3], pose[4][4];
+		float* fMax = (float*)(&ppfModel->PPF.data[max_votes_i * ppfModel->PPF.step]);
+		const double pMax[4] = {fMax[0], fMax[1], fMax[2], 1};
+		const double nMax[4] = {fMax[3], fMax[4], fMax[5], 1};
+		double pose[4][4];
+
+		compute_transform_rt(pMax, nMax, Rmg, tmg);
+		row1=&Rsg[0]; row2=&Rsg[3]; row3=&Rsg[6];
+
+		double Tmg[16] =	{	Rmg[0], Rmg[1], Rmg[2], tmg[0],
+								Rmg[3], Rmg[4], Rmg[5], tmg[1],
+								Rmg[6], Rmg[7], Rmg[8], tmg[2],
+								0, 0, 0, 1
+							};
+
+		
+
 
 		// convert alpha_index to alpha
+		// int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 		int alpha_index = max_votes_j;
+		double alpha = (alpha_index*(4*PI))/numAngles-2*PI;
+
+		// Equation 2:
+		double Talpha[16]={0};
+		get_unit_x_rotation_44(alpha, Talpha);
+
+		double Temp[16]={0};
+		matrix_product44(Talpha, Tmg, Temp);
+
+		PPFPose *ppf = new PPFPose(alpha, max_votes_i, max_votes);
+		
+		matrix_product44(TsgInv, Temp, ppf->Pose);
+
+		poseList[c++] = ppf;
+
+		printf("Model Reference: %d, Alpha Index: %d, Alpha: %f\n", max_votes_i, max_votes_j, alpha);
+
+		if (alpha_index==15)
+		{
+
+	/*	for (int im=0; im<4; im++)
+		{
+			for (int jm=0; jm<4; jm++)
+				printf("%f ", Pose[im*4+jm]);
+			
+			printf("\n");
+		}
+
+		printf("\n");*/
+		}
 
 
 		//compute_transform_rt_yz(p1, n1, row2, row3, Tmg);
@@ -497,6 +594,26 @@ int main()
 	t_match_pc_ppf(pc, 15, 5, ppfModel);
 
 	//compute_ppf_pc(pc, PPFMAt, const double RelSamplingStep, const double RelativeAngleStep, const double RelativeDistanceStep, TPPFModelPC** Model3D)
+
+	return 0;
+}
+
+// rotation test
+int main_rt()
+{
+	double r[3]={1,0,0};
+	double angle = 0.319;
+	double R[16]={0};
+	get_unit_x_rotation_44(angle, R);
+	for (int i=0; i<16; i++)
+		printf("%f,", R[i]);
+
+	printf("\n\n");
+	memset(R,0,sizeof(double)*16);
+	//axis_angle_to_matrix(r, angle, R);
+	compute_axis_angle(angle, r, R);
+	for (int i=0; i<9; i++)
+		printf("%f,", R[i]);
 
 	return 0;
 }
