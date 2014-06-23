@@ -420,9 +420,11 @@ void rt_to_pose(const double R[9], const double t[3], double Pose[16])
 	Pose[11]=t[2];	
 }
 
-vector < PPFPose* > cluster_poses(PPFPose** poseList, const int numPoses, const double PositionThreshold, const double RotationThreshold, const double MinMatchScore, vector < vector < PPFPose* > > clusters, vector < int > clusterVotes)
+int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionThreshold, const double RotationThreshold, const double MinMatchScore, vector < PPFPose* >& finalPoses)
 {
-	vector < PPFPose* > finalPoses;
+	vector < vector < PPFPose* > > clusters;
+	vector < int > clusterVotes;
+	//vector < PPFPose* > finalPoses;
 
 	clusters.clear();
 	clusterVotes.clear();
@@ -460,6 +462,8 @@ vector < PPFPose* > cluster_poses(PPFPose** poseList, const int numPoses, const 
 
 	// sort the clusters so that we could output multiple hypothesis
 	std::sort (clusterVotes.begin (), clusterVotes.end (), sort_cluster_cmp);
+
+	finalPoses.resize(clusters.size());
 
 	// TODO: Use MinMatchScore
 
@@ -509,16 +513,15 @@ vector < PPFPose* > cluster_poses(PPFPose** poseList, const int numPoses, const 
 
 		// we won't need this
 		clusters[i].clear();
-
 	}
 
 	clusters.clear();
 	clusterVotes.clear();
 
-	return finalPoses;
+	return 0;
 }
 
-void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppfModel)
+void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, const TPPFModelPC* ppfModel, vector < PPFPose* >& results)
 {
 	cvflann::Matrix<float> data;
 	int i;
@@ -702,8 +705,6 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 								0, 0, 0, 1
 							};
 
-		
-
 
 		// convert alpha_index to alpha
 		// int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
@@ -741,15 +742,15 @@ void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppf
 
 		printf("\n");*/
 		}
-
-
-		//compute_transform_rt_yz(p1, n1, row2, row3, Tmg);
-
-
-
-
-		//PPFPose
 	}
+
+	double RotationThreshold = (20.0 / 180.0 * M_PI);
+	double PositionThreshold = 0.01f;
+	double MinMatchScore = 0.5;
+	//vector < PPFPose* > results;
+	
+	cluster_poses(poseList, c, PositionThreshold, RotationThreshold, MinMatchScore, results);
+
 }
 
 int main()
@@ -764,7 +765,8 @@ int main()
 	TPPFModelPC* ppfModel = 0;
 	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
 
-	t_match_pc_ppf(pc, 15, 5, ppfModel);
+	vector < PPFPose* > results;
+	t_match_pc_ppf(pc, 15, 5, ppfModel, results);
 
 	//compute_ppf_pc(pc, PPFMAt, const double RelSamplingStep, const double RelativeAngleStep, const double RelativeDistanceStep, TPPFModelPC** Model3D)
 
