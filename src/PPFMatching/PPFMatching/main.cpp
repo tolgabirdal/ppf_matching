@@ -75,6 +75,48 @@ public:
 		// compute the quaternion
 		matrix_to_quaternion(R, q);
 	}
+
+	void update_pose(double NewR[9], double NewT[3])
+	{
+		//for (int i=0; i<16; i++)
+		//	Pose[i]=NewPose[i];
+		Pose[0]=NewR[0]; Pose[1]=NewR[1]; Pose[2]=NewR[2]; Pose[3]=NewT[0];
+		Pose[4]=NewR[3]; Pose[5]=NewR[4]; Pose[6]=NewR[5]; Pose[7]=NewT[1];
+		Pose[8]=NewR[6]; Pose[9]=NewR[7]; Pose[10]=NewR[8]; Pose[11]=NewT[2];
+		Pose[12]=0;		 Pose[13]=0;	  Pose[14]=0;	   Pose[15]=1;
+
+		// compute the angle
+		const double trace = NewR[0] + NewR[4] + NewR[8];
+
+		if (fabs(trace - 3) <= EPS)		 { angle = 0;	}
+		else if (fabs(trace + 1) <= EPS) { angle = M_PI;	}
+		else							 {angle = ( acos((trace - 1)/2) ); }
+
+		// compute the quaternion
+		matrix_to_quaternion(NewR, q);
+	}
+
+	void update_pose_quat(double Q[4], double NewT[3])
+	{
+		TDouble NewR[9];
+
+		quaternion_to_matrix(Q, NewR);
+		q[0]=Q[0]; q[1]=Q[1]; q[2]=Q[2]; q[3]=Q[3]; 
+
+		//for (int i=0; i<16; i++)
+		//	Pose[i]=NewPose[i];
+		Pose[0]=NewR[0]; Pose[1]=NewR[1]; Pose[2]=NewR[2]; Pose[3]=NewT[0];
+		Pose[4]=NewR[3]; Pose[5]=NewR[4]; Pose[6]=NewR[5]; Pose[7]=NewT[1];
+		Pose[8]=NewR[6]; Pose[9]=NewR[7]; Pose[10]=NewR[8]; Pose[11]=NewT[2];
+		Pose[12]=0;		 Pose[13]=0;	  Pose[14]=0;	   Pose[15]=1;
+
+		// compute the angle
+		const double trace = NewR[0] + NewR[4] + NewR[8];
+
+		if (fabs(trace - 3) <= EPS)		 { angle = 0;	}
+		else if (fabs(trace + 1) <= EPS) { angle = M_PI;	}
+		else							 {angle = ( acos((trace - 1)/2) ); }
+	}
 	
 	~PPFPose(){};
 
@@ -367,8 +409,12 @@ bool match_pose(const PPFPose sourcePose, const PPFPose targetPose, const double
 	// translational difference
 	const double* Pose = sourcePose.Pose;
 	const double* PoseT = targetPose.Pose;
-	const double d[3] = {targetPose.t[0]-sourcePose.t[0], targetPose.t[1]-sourcePose.t[1], targetPose.t[2]-sourcePose.t[2]};
-	const double dt = TNorm3(d);
+	double dv[3] = {targetPose.t[0]-sourcePose.t[0], targetPose.t[1]-sourcePose.t[1], targetPose.t[2]-sourcePose.t[2]};
+	//double dNorm = dv[0]*dv[0]+dv[1]*dv[1]+dv[2]*dv[2];
+	double dNorm = dv[0]*dv[0];
+	dNorm += dv[1] * dv[1];
+	dNorm += dv[2] * dv[2];
+	dNorm=sqrt(dNorm);
 
 	// angle is precomputed, so we don't need those.
 	/*
@@ -389,14 +435,14 @@ bool match_pose(const PPFPose sourcePose, const PPFPose targetPose, const double
 
 	const double phi = fabs ( sourcePose.angle - targetPose.angle );
 
-	return (phi<RotationThreshold && dt < PositionThrehsold);
+	return (phi<RotationThreshold && dNorm < PositionThrehsold);
 }
 
 int qsort_pose_cmp (const void * a, const void * b)
 {
-	PPFPose* pose1 = (PPFPose*)a;
-	PPFPose* pose2 = (PPFPose*)b;
-   return ( pose1->numVotes - pose2->numVotes );
+	PPFPose* pose1 = *(PPFPose**)a;
+	PPFPose* pose2 = *(PPFPose**)b;
+   return ( pose2->numVotes - pose1->numVotes );
 }
 
 int sort_cluster_cmp (const int a, const int b)
@@ -441,11 +487,11 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 		// search all clusters
 		for (int j=0; j<clusters.size(); j++)
 		{
-			const PPFPose* poseCenter = clusters[i][0];
+			const PPFPose* poseCenter = clusters[j][0];
 			if (match_pose(*pose, *poseCenter, PositionThreshold, RotationThreshold))
 			{
-				clusters[i].push_back(pose);
-				clusterVotes[i]+=(pose->numVotes);
+				clusters[j].push_back(pose);
+				clusterVotes[j]+=(pose->numVotes);
 				assigned = true;
 				break;
 			}
@@ -498,16 +544,17 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 		qAvg[2]/=(double)curSize;
 		qAvg[3]/=(double)curSize;
 
-		quaternion_to_matrix(qAvg, R);
 
-		rt_to_pose(R, tAvg, Pose);
+		//quaternion_to_matrix(qAvg, R);
+		//rt_to_pose(R, tAvg, Pose);
+		//curPoses[0]->update_pose(Pose);
 
-		curPoses[0]->update_pose(Pose);
+		curPoses[0]->update_pose_quat(qAvg, tAvg);
 		curPoses[0]->numVotes=clusterVotes[i];
 		
 		// retain the better quaternion
-		curPoses[0]->q[0]=qAvg[0]; curPoses[0]->q[1]=qAvg[1]; 
-		curPoses[0]->q[2]=qAvg[2]; curPoses[0]->q[3]=qAvg[3]; 
+		//curPoses[0]->q[0]=qAvg[0]; curPoses[0]->q[1]=qAvg[1]; 
+		//curPoses[0]->q[2]=qAvg[2]; curPoses[0]->q[3]=qAvg[3]; 
 
 		finalPoses.push_back(curPoses[0]);
 
@@ -538,7 +585,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	int numRefPoints = ppfModel->numRefPoints;
 	unsigned int n = numRefPoints;
 	PPFPose** poseList;
-	int sceneSamplingStep = 5, c = 0;
+	int sceneSamplingStep = 10, c = 0;
 
 	// compute bbox
 	float xRange[2], yRange[2], zRange[2];
@@ -745,7 +792,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	}
 
 	double RotationThreshold = (20.0 / 180.0 * M_PI);
-	double PositionThreshold = 0.01f;
+	double PositionThreshold = 0.2f;
 	double MinMatchScore = 0.5;
 	//vector < PPFPose* > results;
 	
