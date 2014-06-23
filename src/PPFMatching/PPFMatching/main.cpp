@@ -6,7 +6,7 @@
 #include "opencv2/imgproc.hpp"*/
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include <opencv2/rgbd/rgbd.hpp>
+//#include <opencv2/rgbd/rgbd.hpp>
 #include <opencv2/flann/flann.hpp>
 
 #include <stdio.h>
@@ -346,6 +346,8 @@ PPFPose* cluster_poses(PPFPose** poseList, int numPoses)
 		PPFPose* pose = poseList[i];
 
 	}
+
+	return NULL;
 }
 
 void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppfModel)
