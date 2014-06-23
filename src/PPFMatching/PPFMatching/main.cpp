@@ -1,24 +1,19 @@
-
-//<<<<<<< HEAD
 /*#include "opencv2/features2d.hpp"
 #include "opencv2/nonfree.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"*/
-#include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/rgbd.hpp"
-#include "opencv2/flann/flann.hpp"
+#include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/rgbd/rgbd.hpp>
+#include <opencv2/flann/flann.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
 
-//=======
-//#include <opencv2/opencv.hpp>
-//>>>>>>> 37dd8f1b41c87a7848dc42b1965e88fa5a6115f9
 #include "helpers.h"
 #include "visualize_win.h"
 #include "c_utils.h"
