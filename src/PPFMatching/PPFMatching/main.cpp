@@ -343,9 +343,14 @@ Mat t_load_ppf_model(const char* FileName)
 	return ppf;
 }
 
-PPFPose* cluster_poses(PPFPose** poseList)
+PPFPose* cluster_poses(PPFPose** poseList, int numPoses)
 {
-	
+	vector < PPFPose** > clusters;
+	for (int i=0; i<numPoses; i++)
+	{
+		PPFPose* pose = poseList[i];
+
+	}
 }
 
 void t_match_pc_ppf(Mat pc, float SearchRadius, int SampleStep, TPPFModelPC* ppfModel)
