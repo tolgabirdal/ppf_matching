@@ -913,47 +913,51 @@ int main()
 	TPPFModelPC* ppfModel = 0;
 	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
 
-	// Make a sample pose:
-	double Pose[16]={0};
-	generate_random_pose(Pose);
-	printf("Random Pose (Ground Truth):\n");
-	matrix_print(Pose, 4,4);	
-
-	// add noise and transform
-	Mat pcPerturb = add_noise_pc(pc);
-	Mat pcPerturbTrans = transform_pc_pose(pcPerturb, Pose);
-	//Mat pcPerturb = pc.clone();
-
-	int64 tick1 = cv::getTickCount();
-	vector < PPFPose* > results;
-	t_match_pc_ppf(pcPerturbTrans, 15, 5, ppfModel, results);
-	int64 tick2 = cv::getTickCount();
-	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
-
-	printf("Estimated Poses (Ground Truth):\n");
-
-	// debug first five poses
-	for (int i=0; i<MIN(5, results.size()); i++)
+	// generate 10 poses and compare
+	for (int numTrials =0 ; numTrials <10; numTrials++)
 	{
-		PPFPose* pose = results[i];
-		
-		// Print the pose
-		printf("Pose %d : Voted by %d, Alpha is %f\n", i, pose->numVotes, pose->alpha);
-		for (int j=0; j<4; j++)
+		// Make a sample pose:
+		double Pose[16]={0};
+		generate_random_pose(Pose, 1);
+		printf("Random Pose (Ground Truth):\n");
+		matrix_print(Pose, 4,4);	
+
+		// add noise and transform
+		Mat pcPerturb = add_noise_pc(pc, 0.02);
+		Mat pcPerturbTrans = transform_pc_pose(pcPerturb, Pose );
+		//Mat pcPerturb = pc.clone();
+
+		int64 tick1 = cv::getTickCount();
+		vector < PPFPose* > results;
+		t_match_pc_ppf(pcPerturbTrans, 15, 5, ppfModel, results);
+		int64 tick2 = cv::getTickCount();
+		printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
+
+		printf("Estimated Poses (Ground Truth):\n");
+
+		// debug first five poses
+		for (int i=0; i<MIN(5, results.size()); i++)
 		{
-			for (int k=0; k<4; k++)
+			PPFPose* pose = results[i];
+
+			// Print the pose
+			printf("Pose %d : Voted by %d, Alpha is %f\n", i, pose->numVotes, pose->alpha);
+			for (int j=0; j<4; j++)
 			{
-				printf("%f ", pose->Pose[j*4+k]);
+				for (int k=0; k<4; k++)
+				{
+					printf("%f ", pose->Pose[j*4+k]);
+				}
+				printf("\n");
 			}
 			printf("\n");
+
+			// Visualize registration
+			Mat pct = transform_pc_pose(pc, pose->Pose);
+			visualize_registration(pcPerturbTrans, pct, "Registration");
 		}
-		printf("\n");
 
-		// Visualize registration
-		Mat pct = transform_pc_pose(pc, pose->Pose);
-		visualize_registration(pcPerturbTrans, pct, "Registration");
 	}
-
 	/*for (int i=0; i<MIN(3, results.size()); i++)
 	{
 		PPFPose* pose = results[i];

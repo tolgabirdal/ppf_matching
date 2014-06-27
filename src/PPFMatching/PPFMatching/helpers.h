@@ -29,8 +29,8 @@ extern "C" {
 	Mat normalize_pc(Mat pc, float scale);
 	Mat transform_pc_pose(Mat pc, double Pose[16]);
 
-	void generate_random_pose(double Pose[16]);
-	Mat add_noise_pc(Mat pc);
+	void generate_random_pose(double Pose[16], double scale);
+	Mat add_noise_pc(Mat pc, double scale);
 
 
 #if defined (__cplusplus)

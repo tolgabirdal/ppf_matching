@@ -299,9 +299,9 @@ void* visualize_registration(Mat pc1, Mat pc2, char* Title)
 	int height = 1024;
 
 	TWindowGL* window=(TWindowGL*)calloc(1, sizeof(TWindowGL));
-	int status=CreateGLWindow(window, Title, 300, 300, width, height, 24);
+	int status=CreateGLWindow(window, Title, 300, 50, width, height, 24);
 
-	MoveGLWindow(window, 300, 300);
+	MoveGLWindow(window, 300, 50);
 	update_window(window);
 
 	glEnable3D(45, 1, 5, width, height);
