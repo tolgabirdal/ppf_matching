@@ -24,6 +24,12 @@ Mat load_ply_simple(const char* fileName, int numVertices, int withNormals)
 
 	ifstream ifs(fileName);
 
+	if (!ifs.is_open())
+	{
+		printf("Cannot open file...\n");
+		return Mat();
+	}
+
 	string str;
 	while (str!="end_header")
 		getline(ifs, str);

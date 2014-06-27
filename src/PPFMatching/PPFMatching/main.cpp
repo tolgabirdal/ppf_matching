@@ -126,6 +126,50 @@ public:
 	double Pose[16], angle, t[3], q[4];
 };
 
+class PoseCluster
+{
+public:
+	PoseCluster() 
+	{
+		poseList.clear();
+		numVotes=0;
+		id=0;
+	};
+	
+	PoseCluster(PPFPose* newPose) 
+	{
+		poseList.clear();
+		poseList.push_back(newPose);
+		numVotes=newPose->numVotes;
+		id=0;
+	};
+
+	PoseCluster(PPFPose* newPose, int id) 
+	{
+		poseList.clear();
+		poseList.push_back(newPose);
+		this->numVotes = newPose->numVotes;
+		this->id = id;
+	};
+
+	~PoseCluster()
+	{
+		numVotes=0;
+		id=0;
+		poseList.clear();
+	};
+
+	void add_pose(PPFPose* newPose) 
+	{
+		poseList.push_back(newPose);
+		this->numVotes += newPose->numVotes;
+	};
+
+	vector < PPFPose* > poseList;
+	int numVotes;
+	int id;
+};
+
 class TPPFModelPC
 {
 public:
@@ -445,9 +489,9 @@ int qsort_pose_cmp (const void * a, const void * b)
    return ( pose2->numVotes - pose1->numVotes );
 }
 
-int sort_cluster_cmp (const int a, const int b)
+int sort_pose_clusters (const PoseCluster* a, const PoseCluster* b)
 {
-   return ( a>b );
+   return ( a->numVotes > b->numVotes );
 }
 
 void rt_to_pose(const double R[9], const double t[3], double Pose[16])
@@ -466,14 +510,18 @@ void rt_to_pose(const double R[9], const double t[3], double Pose[16])
 	Pose[11]=t[2];	
 }
 
+
 int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionThreshold, const double RotationThreshold, const double MinMatchScore, vector < PPFPose* >& finalPoses)
 {
-	vector < vector < PPFPose* > > clusters;
-	vector < int > clusterVotes;
+	// vector < vector < PPFPose* > > clusters;
+	// vector < std::pair< int,int > > clusterVotes;
 	//vector < PPFPose* > finalPoses;
 
-	clusters.clear();
-	clusterVotes.clear();
+	vector<PoseCluster*> poseClusters;
+	poseClusters.clear();
+
+//	clusters.clear();
+	//clusterVotes.clear();
 	finalPoses.clear();
 
 	// sort the poses for stability
@@ -485,13 +533,17 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 		bool assigned = false;
 
 		// search all clusters
-		for (int j=0; j<clusters.size(); j++)
+		for (int j=0; j<poseClusters.size(); j++)
 		{
-			const PPFPose* poseCenter = clusters[j][0];
+			const PPFPose* poseCenter = poseClusters[j]->poseList[0];
 			if (match_pose(*pose, *poseCenter, PositionThreshold, RotationThreshold))
 			{
-				clusters[j].push_back(pose);
-				clusterVotes[j]+=(pose->numVotes);
+				//clusters[j].push_back(pose);
+				//clusterVotes[j].first+=(pose->numVotes);
+				poseClusters[j]->add_pose(pose);
+				//poseClusters[j]->poseList.push_back(pose);
+				//poseClusters[j]->numVotes+=pose->numVotes;
+
 				assigned = true;
 				break;
 			}
@@ -499,28 +551,30 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 
 		if (!assigned)
 		{
-			vector < PPFPose* > newCluster;
-			newCluster.push_back(pose);
-			clusters.push_back(newCluster);
-			clusterVotes.push_back(pose->numVotes);
+			//vector < PPFPose* > newCluster;
+			//newCluster.push_back(pose);
+			poseClusters.push_back ( new PoseCluster(pose));
+			//clusters.push_back(newCluster);
+			//clusterVotes.push_back(std::pair(clusterVotes.size(), pose->numVotes));
 		}
 	}
 
 	// sort the clusters so that we could output multiple hypothesis
-	std::sort (clusterVotes.begin (), clusterVotes.end (), sort_cluster_cmp);
+	//std::sort (clusterVotes.begin (), clusterVotes.end (), sort_cluster_cmp);
+	std::sort (poseClusters.begin(), poseClusters.end(), sort_pose_clusters);
 
-	finalPoses.resize(clusters.size());
+	finalPoses.resize(poseClusters.size());
 
 	// TODO: Use MinMatchScore
 
-	for (int i=0; i<clusters.size(); i++)
+	for (int i=0; i<poseClusters.size(); i++)
 	{
-		// We could only average the quaternions. So I will make use of them here
-		
+		// We could only average the quaternions. So I will make use of them here		
 		double qAvg[4]={0}, tAvg[3]={0}, R[9]={0}, Pose[16]={0};
 
 		// Perform the final averaging
-		vector<PPFPose*> curPoses = clusters[i];
+		PoseCluster* curCluster = poseClusters[i];
+		vector<PPFPose*> curPoses = curCluster->poseList;
 		const int curSize = curPoses.size();
 
 		for (int j=0; j<curSize; j++)
@@ -550,7 +604,7 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 		//curPoses[0]->update_pose(Pose);
 
 		curPoses[0]->update_pose_quat(qAvg, tAvg);
-		curPoses[0]->numVotes=clusterVotes[i];
+		curPoses[0]->numVotes=curCluster->numVotes;
 		
 		// retain the better quaternion
 		//curPoses[0]->q[0]=qAvg[0]; curPoses[0]->q[1]=qAvg[1]; 
@@ -559,11 +613,14 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 		finalPoses.push_back(curPoses[0]);
 
 		// we won't need this
-		clusters[i].clear();
+		//clusters[i].clear();
+		delete poseClusters[i];
 	}
 
-	clusters.clear();
-	clusterVotes.clear();
+	poseClusters.clear();
+
+	//clusters.clear();
+	//clusterVotes.clear();
 
 	return 0;
 }
@@ -1022,3 +1079,4 @@ int main_ply()
 
 	return 0;
 }*/
+
