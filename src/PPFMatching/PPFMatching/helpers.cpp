@@ -412,13 +412,13 @@ Mat transform_pc_pose(Mat pc, double Pose[16])
 	return pct;
 }
 
-Mat gen_random_mat(int rows, int cols)
+Mat gen_random_mat(int rows, int cols, double mean, double stddev, int type)
 {
-	cv::Mat mean = 0.5*cv::Mat::ones(1,1,CV_64FC1);
-	cv::Mat sigma= 0.5*cv::Mat::ones(1,1,CV_64FC1);
+	cv::Mat meanMat = mean*cv::Mat::ones(1,1,type);
+	cv::Mat sigmaMat= stddev*cv::Mat::ones(1,1,type);
 	cv::RNG rng;
-	cv::Mat matr(rows, cols,CV_64FC1);
-	rng.fill(matr, cv::RNG::NORMAL, mean, sigma);
+	cv::Mat matr(rows, cols,type);
+	rng.fill(matr, cv::RNG::NORMAL, meanMat, sigmaMat);
 
 	return matr;
 }
@@ -426,13 +426,13 @@ Mat gen_random_mat(int rows, int cols)
 void generate_random_pose(double Pose[16])
 {
 	Mat S, U, V, R;
-	Mat randR = gen_random_mat(3,3);
+	Mat randR = gen_random_mat(3,3,0.5,0.5,CV_64FC1);
 
 	cv::SVDecomp(randR, S, U, V);
 	S = Mat::eye(3, 3, CV_64F);
 	R = U*S*V;
 
-	Mat randT = gen_random_mat(3,1);
+	Mat randT = gen_random_mat(3,1,0.5,0.5,CV_64FC1);
 	
 	Pose[0]=R.at<double>(0,0);
 	Pose[1]=R.at<double>(0,1);
@@ -444,9 +444,15 @@ void generate_random_pose(double Pose[16])
 	Pose[9]=R.at<double>(2,1);
 	Pose[10]=R.at<double>(2,2);
 
-	/*Pose[3]=randT.at<double>(0)-0.5;
+	Pose[3]=randT.at<double>(0)-0.5;
 	Pose[7]=randT.at<double>(1)-0.5;
-	Pose[11]=randT.at<double>(2)-0.5;*/
+	Pose[11]=randT.at<double>(2)-0.5;
 
 	Pose[15] = 1;
+}
+
+Mat add_noise_pc(Mat pc)
+{
+	Mat randT = gen_random_mat(pc.rows,pc.cols,0,0.01,CV_32FC1);
+	return randT + pc;
 }

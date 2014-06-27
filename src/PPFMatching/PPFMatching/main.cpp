@@ -919,12 +919,14 @@ int main()
 	printf("Random Pose (Ground Truth):\n");
 	matrix_print(Pose, 4,4);	
 
-	Mat pcPerturb = transform_pc_pose(pc, Pose);
+	// add noise and transform
+	Mat pcPerturb = add_noise_pc(pc);
+	Mat pcPerturbTrans = transform_pc_pose(pcPerturb, Pose);
 	//Mat pcPerturb = pc.clone();
 
 	int64 tick1 = cv::getTickCount();
 	vector < PPFPose* > results;
-	t_match_pc_ppf(pcPerturb, 15, 5, ppfModel, results);
+	t_match_pc_ppf(pcPerturbTrans, 15, 5, ppfModel, results);
 	int64 tick2 = cv::getTickCount();
 	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
@@ -949,7 +951,7 @@ int main()
 
 		// Visualize registration
 		Mat pct = transform_pc_pose(pc, pose->Pose);
-		visualize_registration(pcPerturb, pct, "Registration");
+		visualize_registration(pcPerturbTrans, pct, "Registration");
 	}
 
 	/*for (int i=0; i<MIN(3, results.size()); i++)

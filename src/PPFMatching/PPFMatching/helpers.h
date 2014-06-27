@@ -30,6 +30,7 @@ extern "C" {
 	Mat transform_pc_pose(Mat pc, double Pose[16]);
 
 	void generate_random_pose(double Pose[16]);
+	Mat add_noise_pc(Mat pc);
 
 
 #if defined (__cplusplus)

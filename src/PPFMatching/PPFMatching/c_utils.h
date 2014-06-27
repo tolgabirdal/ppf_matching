@@ -7,7 +7,7 @@
 
 #define EPS		1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
 
-//#define T_OPENMP // define this if OpenMP is desired
+#define T_OPENMP // define this if OpenMP is desired
 
 #ifndef PI
 #ifdef  M_PI
