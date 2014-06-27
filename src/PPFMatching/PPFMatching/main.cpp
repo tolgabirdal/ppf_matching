@@ -28,6 +28,10 @@ using namespace cv;
 #endif
 #include "THashInt.h"
 
+#if defined (T_OPENMP)
+#include<omp.h>
+#endif
+
 typedef struct THash {
 	int id;
 	int i, j, ppfInd;
@@ -713,22 +717,22 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	float dz = zRange[1] - zRange[0];
 	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
 	float distanceSampleStep = diameter * sampling_step_relative;
-	//Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, distanceSampleStep);
-	Mat sampled = pc.clone();
+	Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, distanceSampleStep);
+	//Mat sampled = pc.clone();
 
 	// allocate the accumulator
 #if !defined (T_OPENMP)
 	unsigned int* accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
 #endif
 
-	poseList = (PPFPose**)calloc((sampled.rows/sceneSamplingStep), sizeof(PPFPose*));
+	poseList = (PPFPose**)calloc((sampled.rows/sceneSamplingStep)+4, sizeof(PPFPose*));
 
 	// obtain the tree representation for fast search
-	flannIndex  = (cvflann::Index<Distance_32F>*)index_pc_flann(sampled, data);
+	//flannIndex  = (cvflann::Index<Distance_32F>*)index_pc_flann(sampled, data);
 
-	cv::Mat1i ind(sampled.rows, numNeighbors);
-	cvflann::Matrix<int> indices((int*) ind.data, ind.rows, ind.cols);
-	cvflann::Matrix<float> dists(new float[sampled.rows*numNeighbors], sampled.rows, numNeighbors);
+	//cv::Mat1i ind(sampled.rows, numNeighbors);
+	//cvflann::Matrix<int> indices((int*) ind.data, ind.rows, ind.cols);
+	//cvflann::Matrix<float> dists(new float[sampled.rows*numNeighbors], sampled.rows, numNeighbors);
 
 	// TODO: Can be parallelized!
 #if defined T_OPENMP
@@ -736,8 +740,8 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 #endif
 	for (i = 0; i < sampled.rows; i += sceneSamplingStep)
 	{
-		unsigned int max_votes_i = 0, max_votes_j = 0;
-		unsigned int max_votes = 0;
+		unsigned int refIndMax = 0, alphaIndMax = 0;
+		unsigned int maxVotes = 0;
 
 		int j;
 
@@ -749,6 +753,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 
 #if defined (T_OPENMP)
 		unsigned int* accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
+		//printf("In thread: %d\n", omp_get_thread_num());
 #endif
 
 		//compute_transform_rt_yz(p1, n1, row2, row3, tsg);
@@ -806,6 +811,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 					//int corrI = (int)tData->j;
 					//int corrJ = (int)tData->j;
 					int ppfInd = (int)tData->ppfInd;
+					//printf("ppfInd - %d\n",ppfInd);
 					//int corrInd = (int)tData->i*sampledStep+j;
 					float* ppfCorrScene = (float*)(&ppfModel->PPF.data[ppfInd]);
 					double alpha_model = (double)ppfCorrScene[T_PPF_LENGTH-1];
@@ -825,11 +831,9 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 					int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 
 					unsigned int accIndex = corrI * numAngles + alpha_index;
-//#if defined T_OPENMP
-//#pragma omp critical
+
 					accumulator[accIndex]++;
 					node = node->next;
-//#endif
 
 					//numNodes++;
 				}
@@ -838,20 +842,21 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		}
 
 		// Maximize the accumulator
-		for (int i = 0; i < n; ++i)
+		for (int k = 0; k < n; k++)
 		{
-			for (int j = 0; j < numAngles; ++j)
+			for (int j = 0; j < numAngles; j++)
 			{
-				const unsigned int accInd = i*numAngles + j;
+				const unsigned int accInd = k*numAngles + j;
 				const unsigned int accVal = accumulator[ accInd ];
-				if (accVal > max_votes)
+				if (accVal > maxVotes)
 				{
-					max_votes = accVal;
-					max_votes_i = i;
-					max_votes_j = j;
+					maxVotes = accVal;
+					refIndMax = k;
+					alphaIndMax = j;
 				}
-				
+#if !defined (T_OPENMP)
 				accumulator[accInd ] = 0;
+#endif
 			}
 		}
 
@@ -869,7 +874,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 								};
 
 		// TODO : Compute pose
-		float* fMax = (float*)(&ppfModel->sampledPC.data[max_votes_i * ppfModel->sampledStep]);
+		const float* fMax = (float*)(&ppfModel->sampledPC.data[refIndMax * ppfModel->sampledPC.step]);
 		const double pMax[4] = {fMax[0], fMax[1], fMax[2], 1};
 		const double nMax[4] = {fMax[3], fMax[4], fMax[5], 1};
 		double pose[4][4];
@@ -885,7 +890,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 
 
 		// convert alpha_index to alpha
-		int alpha_index = max_votes_j;
+		int alpha_index = alphaIndMax;
 		double alpha = (alpha_index*(4*PI))/numAngles-2*PI;
 		//alpha=-alpha;
 
@@ -898,13 +903,13 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		matrix_product44(Talpha, Tmg, Temp);
 		matrix_product44(TsgInv, Temp, Pose);
 
-		PPFPose *ppf = new PPFPose(alpha, max_votes_i, max_votes);
+		PPFPose *ppf = new PPFPose(alpha, refIndMax, maxVotes);
 		
 		ppf->update_pose(Pose);
 
-		poseList[i] = ppf;
+		poseList[i/sceneSamplingStep] = ppf;
 
-		printf("Model Reference: %d, Alpha Index: %d, Alpha: %f\n", max_votes_i, max_votes_j, alpha);
+//		printf("Model Reference: %d, Alpha Index: %d, Alpha: %f\n", refIndMax, alphaIndMax, alpha);
 
 #if defined (T_OPENMP)
 		free(accumulator);
@@ -915,7 +920,13 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	double PositionThreshold = 0.01f;
 	double MinMatchScore = 0.5;
 	
-	cluster_poses(poseList, numRefPoints, PositionThreshold, RotationThreshold, MinMatchScore, results);
+	printf("Will cluster now\n");
+	cluster_poses(poseList, sampled.rows/sceneSamplingStep, PositionThreshold, RotationThreshold, MinMatchScore, results);
+
+	free(poseList);
+#if !defined (T_OPENMP)
+		free(accumulator);
+#endif
 }
 
 int main()
@@ -928,13 +939,16 @@ int main()
 	//Mat pc = Mat(100,100,CV_32FC1);
 
 	// Make a sample pose:
-	generate_random_pose();
+//	generate_random_pose();
 
 	TPPFModelPC* ppfModel = 0;
 	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
 
+	int64 tick1 = cv::getTickCount();
 	vector < PPFPose* > results;
 	t_match_pc_ppf(pc, 15, 5, ppfModel, results);
+	int64 tick2 = cv::getTickCount();
+	printf("%f\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
 	// debug first five poses
 	for (int i=0; i<MIN(5, results.size()); i++)
