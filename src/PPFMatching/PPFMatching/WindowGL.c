@@ -1085,6 +1085,13 @@ void clear_window(TWindowGL* window)
 	glDeleteLists(0,1000);
 }
 
+int close_window(TWindowGL* window)
+{
+	clear_window(window);
+	KillGLWindow(window);
+	return 0;
+}
+
 void set_color(TWindowGL* window, unsigned char R, unsigned char G, unsigned char B)
 {
 	currentWindow->color.red=(float)R/255.0;

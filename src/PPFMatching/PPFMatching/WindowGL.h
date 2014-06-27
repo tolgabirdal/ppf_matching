@@ -145,6 +145,7 @@ extern "C" {
 	void set_scale(TWindowGL* window, float sx, float sy, float sz);
 
 	void clear_window(TWindowGL* window);
+	int close_window(TWindowGL* window);
 	float GetOpenGLVersion ( void );
 	void get_pixel_buffer(unsigned char* dst, const int x, const int y, const int w, const int h, const int ws);
 

@@ -117,6 +117,49 @@ public:
 		else if (fabs(trace + 1) <= EPS) { angle = M_PI;	}
 		else							 {angle = ( acos((trace - 1)/2) ); }
 	}
+
+	int write_pose(const char* FileName)
+	{
+		FILE* f = fopen(FileNameInfo, "wb");
+
+		if (!f)
+			return -1;
+
+		int POSE_MAGIC = 7673;
+
+		fwrite(&POSE_MAGIC, sizeof(int), 1, f);
+		fwrite(&angle, sizeof(double), 1, f);
+		fwrite(&numVotes, sizeof(int), 1, f);
+		fwrite(&modelIndex, sizeof(int), 1, f);
+		fwrite(Pose, sizeof(double)*16, 1, f);
+		fwrite(t, sizeof(double)*3, 1, f);
+		fwrite(q, sizeof(double)*4, 1, f);
+
+		fclose(f);
+	}
+
+	int read_pose(const char* FileName)
+	{
+		FILE* f = fopen(FileNameInfo, "rb");
+
+		if (!f)
+			return -1;
+
+		int POSE_MAGIC = 7673, magic;
+
+		fread(&magic, sizeof(int), 1, f);
+
+		if (magic == POSE_MAGIC)
+		{
+			fread(&angle, sizeof(double), 1, f);
+			fread(&numVotes, sizeof(int), 1, f);
+			fread(&modelIndex, sizeof(int), 1, f);
+			fread(Pose, sizeof(double)*16, 1, f);
+			fread(t, sizeof(double)*3, 1, f);
+			fread(q, sizeof(double)*4, 1, f);
+		}
+		fclose(f);
+	}
 	
 	~PPFPose(){};
 
@@ -610,7 +653,8 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 		//curPoses[0]->q[0]=qAvg[0]; curPoses[0]->q[1]=qAvg[1]; 
 		//curPoses[0]->q[2]=qAvg[2]; curPoses[0]->q[3]=qAvg[3]; 
 
-		finalPoses.push_back(curPoses[0]);
+		//finalPoses.push_back(curPoses[0]);
+		finalPoses[i]=curPoses[0];
 
 		// we won't need this
 		//clusters[i].clear();
@@ -642,7 +686,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	int numRefPoints = ppfModel->numRefPoints;
 	unsigned int n = numRefPoints;
 	PPFPose** poseList;
-	int sceneSamplingStep = 10, c = 0;
+	int sceneSamplingStep = 5, c = 0;
 
 	// compute bbox
 	float xRange[2], yRange[2], zRange[2];
@@ -826,8 +870,12 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		PPFPose *ppf = new PPFPose(alpha, max_votes_i, max_votes);
 		
 		matrix_product44(TsgInv, Temp, Pose);
-		
+
 		ppf->update_pose(Pose);
+
+		/*for (int jm=0; jm<4; jm++)
+			printf("%f ", ppf->q[jm]);
+		printf("\n");*/		
 
 		poseList[c++] = ppf;
 
@@ -871,6 +919,30 @@ int main()
 
 	vector < PPFPose* > results;
 	t_match_pc_ppf(pc, 15, 5, ppfModel, results);
+
+	for (int i=0; i<MIN(5, results.size()); i++)
+	{
+		Mat pct = transform_pc_pose(pc, results[i]->Pose);
+	
+		visualize_registration(pc, pct, "Registration");
+	}
+
+	// print first three poses
+	/*for (int i=0; i<MIN(3, results.size()); i++)
+	{
+		PPFPose* pose = results[i];
+
+		printf("Pose %d : Voted by %d, Alpha is %f\n", i, pose->numVotes, pose->alpha);
+		for (int j=0; j<4; j++)
+		{
+			for (int k=0; k<4; k++)
+			{
+				printf("%f ", pose->Pose[j*4+k]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}*/
 
 	//compute_ppf_pc(pc, PPFMAt, const double RelSamplingStep, const double RelativeAngleStep, const double RelativeDistanceStep, TPPFModelPC** Model3D)
 

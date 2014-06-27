@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 	void* visualize_pc(Mat cloud, int withNormals, int withBbox, int withOctree, char* Title);
+	void* visualize_registration(Mat pc1, Mat pc2, char* Title);
 
 #if defined (__cplusplus)
 }

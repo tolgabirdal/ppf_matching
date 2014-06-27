@@ -1,4 +1,5 @@
 #include "helpers.h"
+#include "c_utils.h"
 #include "gdiam.hpp"
 #include <iostream>
 #include <vector>
@@ -330,4 +331,61 @@ void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2])
 	xRange[1]=bbx.max_coord(0);
 	yRange[1]=bbx.max_coord(1);
 	zRange[1]=bbx.max_coord(2);
+}
+
+
+Mat normalize_pc(Mat pc, float scale)
+{
+	double minVal=0, maxVal=0;
+
+	Mat x,y,z, pcn;
+	pc.col(0).copyTo(x);
+	pc.col(1).copyTo(y);
+	pc.col(2).copyTo(z);
+
+	float cx = cv::mean(x).val[0];
+	float cy = cv::mean(y).val[0];
+	float cz = cv::mean(z).val[0];
+
+	cv::minMaxIdx(pc, &minVal, &maxVal);
+
+	x=x-cx;
+	y=y-cy;
+	z=z-cz;
+	pcn.create(pc.rows, 3, CV_32FC1);
+	x.copyTo(pcn.col(0));
+	y.copyTo(pcn.col(1));
+	z.copyTo(pcn.col(2));
+
+	cv::minMaxIdx(pcn, &minVal, &maxVal);
+	pcn=(float)scale*(pcn)/((float)maxVal-(float)minVal);
+	
+	return pcn;
+}
+
+Mat transform_pc_pose(Mat pc, double Pose[16])
+{
+	Mat pct = Mat(pc.rows, pc.cols, CV_32FC1);
+	for (int i=0; i<pc.rows; i++)
+	{
+		float *pcData = (float*)(&pc.data[i*pc.step[0]]);
+		float *pcDataT = (float*)(&pct.data[i*pct.step[0]]);
+
+		double p[4] = {(double)pcData[0], (double)pcData[1], (double)pcData[2], 1};
+		double p2[4];
+		
+		matrix_product441(Pose, p, p2);
+
+		// p2[3] should normally be 1
+		if (abs(p2[3])>EPS)
+		{
+			pcDataT[0] = (float)p2[0]/p2[3];
+			pcDataT[1] = (float)p2[1]/p2[3];
+			pcDataT[2] = (float)p2[2]/p2[3];
+		}
+
+		// TODO : ROTATE THE NORMALS AS WELL
+	}
+
+	return pct;
 }

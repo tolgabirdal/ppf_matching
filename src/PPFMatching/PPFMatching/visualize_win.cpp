@@ -7,6 +7,7 @@
 typedef struct
 {
 	Mat PC;
+	Mat PC2;
 	TOctreeNode* octree;
 	TWindowGL* window;
 	int withNormals, withBbox, withOctree;
@@ -184,6 +185,75 @@ int display(void* UserData)
 	return 0;
 }
 
+int display_registration(void* UserData)
+{
+	TWindowData* wd = (TWindowData*)UserData;
+
+	Mat pc = wd->PC;
+	Mat pc2 = wd->PC2;
+	TWindowGL* window = wd->window;
+	double diam=5;
+	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(60, 1.0, 1, diam*4);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	
+	gluLookAt (-diam, diam, diam/2,
+                0,0, 0,
+                0.0, 1.0, 0.0);
+
+	if (window->tracking)
+		glRotatef(window->angle, window->rx, window->ry, window->rz);
+
+	glRotatef(window->gangle, window->grx, window->gry, window->grz);
+	//else
+
+	/*glRotatef(80,0,0,1);
+	glRotatef(40,0,1,0);*/
+
+	// set lights
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);
+    glEnable(GL_LIGHTING);
+    glMaterialfv(GL_FRONT, GL_AMBIENT, amb);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, dif);
+
+	//glColor4f(1,1,1,1);
+	int glSize = 2;
+	glLineWidth(glSize);
+	glPointSize(glSize);
+
+	/*glDisable(GL_LIGHT0);
+	glDisable(GL_LIGHT1);*/
+	glDisable(GL_LIGHTING);
+
+	glColor4f(1,0,0,1);
+
+	glBegin(GL_POINTS);
+	for (int i=0; i!=pc.rows; i++)
+	{
+		float* data = (float*)(&pc.data[i*pc.step[0]]);
+		glVertex3f(data[0], data[1], data[2]);
+	}
+	glEnd();
+
+	glColor4f(0,1,0,1);
+	glBegin(GL_POINTS);
+	for (int i=0; i!=pc2.rows; i++)
+	{
+		float* data = (float*)(&pc2.data[i*pc2.step[0]]);
+		glVertex3f(data[0], data[1], data[2]);
+	}
+	glEnd();
+
+	return 0;
+}
+
 void* visualize_pc(Mat pc, int withNormals, int withBbox, int withOctree, char* Title)
 {
 	int width = 1024;
@@ -215,6 +285,43 @@ void* visualize_pc(Mat pc, int withNormals, int withBbox, int withOctree, char* 
 
 	//update_window(window);
 	wait_window(window);
+
+	close_window(window);
+
+	return (void*)window;
+}
+
+
+
+void* visualize_registration(Mat pc1, Mat pc2, char* Title)
+{
+	int width = 1024;
+	int height = 1024;
+
+	TWindowGL* window=(TWindowGL*)calloc(1, sizeof(TWindowGL));
+	int status=CreateGLWindow(window, Title, 300, 300, width, height, 24);
+
+	MoveGLWindow(window, 300, 300);
+	update_window(window);
+
+	glEnable3D(45, 1, 5, width, height);
+
+	TWindowData* wd = new TWindowData();
+	
+	wd->PC = normalize_pc(pc1, 5);
+	wd->PC2 = normalize_pc(pc2, 5);
+
+	wd->window = window;
+	
+	//draw_custom_gl_scene(window, display, wd);
+	register_custom_gl_scene(window, display_registration, wd);
+
+	//update_window(window);
+	wait_window(window);
+
+	close_window(window);
+
+	
 
 	return (void*)window;
 }

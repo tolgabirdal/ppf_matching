@@ -2,6 +2,8 @@
 #ifndef __UTILS_H_
 #define __UTILS_H_
 
+#include <math.h>
+
 #define EPS		1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
 
 #define T_OPENMP // define this if OpenMP is desired
@@ -115,6 +117,14 @@ extern "C" {
 		R[15] = A[12] * B[3] + A[13] * B[7] + A[14] * B[11] + A[15] * B[15];
 	}
 
+	static __inline void matrix_product441(const double A[16], const double B[4], double R[4])
+	{
+		R[0] = A[0] * B[0] + A[1] * B[1] + A[2] * B[2] + A[3] * B[3];
+		R[1] = A[4] * B[0] + A[5] * B[1] + A[6] * B[2] + A[7] * B[3];
+		R[2] = A[8] * B[0] + A[9] * B[1] + A[10] * B[2] + A[11] * B[3];
+		R[3] = A[12] * B[0] + A[13] * B[1] + A[14] * B[2] + A[15] * B[3];
+	}
+
 
 	/*static __inline int next_power_of_two(int x)
 	{
@@ -195,7 +205,10 @@ extern "C" {
 
 	static __inline void compute_transform_rt_yz(const double p1[4], const double n1[4], double row2[3], double row3[3], double t[3])
 	{
+		// dot product with x axis
 		double angle=acos( n1[0] );
+
+		// cross product with x axis
 		double axis[3]={0, n1[2], -n1[1]};
 		double axisNorm;
 

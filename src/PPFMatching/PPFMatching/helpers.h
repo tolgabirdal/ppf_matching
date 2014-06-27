@@ -26,6 +26,9 @@ extern "C" {
 	TOctreeNode* Mat2Octree(Mat pc);
 	void* index_pc_flann(Mat pc, cvflann::Matrix<float>& data);
 	
+	Mat normalize_pc(Mat pc, float scale);
+	Mat transform_pc_pose(Mat pc, double Pose[16]);
+
 #if defined (__cplusplus)
 }
 #endif
