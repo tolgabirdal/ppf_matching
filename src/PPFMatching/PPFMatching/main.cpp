@@ -693,7 +693,6 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	int i;
 	int numNeighbors = 1000;
 	int numAngles = (int) (floor (2 * M_PI / ppfModel->angleStep));
-	unsigned int* accumulator;
 	cvflann::Index<Distance_32F>* flannIndex;
 	float angleStepRadians = ppfModel->angleStep;
 	float distanceStep = ppfModel->distStep;
@@ -718,7 +717,10 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	Mat sampled = pc.clone();
 
 	// allocate the accumulator
-	accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
+#if !defined (T_OPENMP)
+	unsigned int* accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
+#endif
+
 	poseList = (PPFPose**)calloc((sampled.rows/sceneSamplingStep), sizeof(PPFPose*));
 
 	// obtain the tree representation for fast search
@@ -744,6 +746,10 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		const double n1[4] = {f1[3], f1[4], f1[5], 0};
 		double p1t[4];
 		double *row1, *row2, *row3, tsg[3]={0}, Rsg[9]={0}, RInv[9]={0};
+
+#if defined (T_OPENMP)
+		unsigned int* accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
+#endif
 
 		//compute_transform_rt_yz(p1, n1, row2, row3, tsg);
 		compute_transform_rt(p1, n1, Rsg, tsg);
@@ -819,11 +825,11 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 					int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 
 					unsigned int accIndex = corrI * numAngles + alpha_index;
-#if defined T_OPENMP
-#pragma omp critical
+//#if defined T_OPENMP
+//#pragma omp critical
 					accumulator[accIndex]++;
 					node = node->next;
-#endif
+//#endif
 
 					//numNodes++;
 				}
@@ -863,8 +869,6 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 								};
 
 		// TODO : Compute pose
-		//unsigned int corrInd = i*numRefPoints+j;
-		//unsigned int ppfInd = corrInd*ppfStep;
 		float* fMax = (float*)(&ppfModel->sampledPC.data[max_votes_i * ppfModel->sampledStep]);
 		const double pMax[4] = {fMax[0], fMax[1], fMax[2], 1};
 		const double nMax[4] = {fMax[3], fMax[4], fMax[5], 1};
@@ -881,7 +885,6 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 
 
 		// convert alpha_index to alpha
-		// int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 		int alpha_index = max_votes_j;
 		double alpha = (alpha_index*(4*PI))/numAngles-2*PI;
 		//alpha=-alpha;
@@ -899,36 +902,20 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		
 		ppf->update_pose(Pose);
 
-		/*for (int jm=0; jm<4; jm++)
-			printf("%f ", ppf->q[jm]);
-		printf("\n");*/		
-
-		poseList[c++] = ppf;
+		poseList[i] = ppf;
 
 		printf("Model Reference: %d, Alpha Index: %d, Alpha: %f\n", max_votes_i, max_votes_j, alpha);
 
-		if (alpha_index==15)
-		{
-
-	/*	for (int im=0; im<4; im++)
-		{
-			for (int jm=0; jm<4; jm++)
-				printf("%f ", Pose[im*4+jm]);
-			
-			printf("\n");
-		}
-
-		printf("\n");*/
-		}
+#if defined (T_OPENMP)
+		free(accumulator);
+#endif
 	}
 
 	double RotationThreshold = (30.0 / 180.0 * M_PI);
 	double PositionThreshold = 0.01f;
 	double MinMatchScore = 0.5;
-	//vector < PPFPose* > results;
 	
-	cluster_poses(poseList, c, PositionThreshold, RotationThreshold, MinMatchScore, results);
-
+	cluster_poses(poseList, numRefPoints, PositionThreshold, RotationThreshold, MinMatchScore, results);
 }
 
 int main()
@@ -939,6 +926,9 @@ int main()
 	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 	//Mat pc = Mat(100,100,CV_32FC1);
+
+	// Make a sample pose:
+	generate_random_pose();
 
 	TPPFModelPC* ppfModel = 0;
 	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
