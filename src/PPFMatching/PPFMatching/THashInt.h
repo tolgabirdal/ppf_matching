@@ -40,8 +40,10 @@ extern "C" {
 	hashtable_int *hashtable_int_create(size_t size, size_t (*hashfunc)(unsigned int));
 	void hashtable_int_destroy(hashtable_int *hashtbl);
 	unsigned int hashtable_int_insert(hashtable_int *hashtbl, unsigned int key, void *data);
+	unsigned int hashtable_int_insert_hashed(hashtable_int *hashtbl, unsigned int key, void *data);
 	unsigned int hashtable_int_remove(hashtable_int *hashtbl, unsigned int key);
 	void *hashtable_int_get(hashtable_int *hashtbl, unsigned int key);
+	hashnode_i* hashtable_int_get_bucket_hashed(hashtable_int *hashtbl, unsigned int key);
 	unsigned int hashtable_int_resize(hashtable_int *hashtbl, size_t size);
 	hashtable_int *hashtable_int_clone(hashtable_int *hashtbl);
 	hashtable_int *hashtable_int_read(FILE* f);

@@ -17,16 +17,23 @@
 #include "helpers.h"
 #include "visualize_win.h"
 #include "c_utils.h"
-#include "THashInt.h"
 #include "hash_murmur.h"
-#include <tommy.h>
 
 using namespace cv;
+
+//#define USE_TOMMY_HASHTABLE
+
+#if defined( USE_TOMMY_HASHTABLE )
+#include <tommy.h>
+#endif
+#include "THashInt.h"
 
 typedef struct THash {
 	int id;
 	int i, j, ppfInd;
+	#if defined( USE_TOMMY_HASHTABLE )
 	tommy_node node;
+	#endif
 } THash;
 
 class PPFPose
@@ -238,12 +245,15 @@ public:
 	int magic;
 	double maxDist, angleStep, distStep;
 	double sampling_step_relative;
-	Mat inputPC, PPF;
+	Mat inputPC, sampledPC, PPF;
 	cvflann::Index<Distance_32F>* flannIndex;
 	//Mat alpha_m;
 	int n, numRefPoints, sampledStep, ppfStep;
+#if defined (USE_TOMMY_HASHTABLE)
 	tommy_hashtable* hashTable;
-//	hashtable_int* hashTable;
+#else
+	hashtable_int* hashTable;
+#endif
 };
 
 
@@ -315,7 +325,7 @@ int hash_ppf_simple(const double f[4], const double AngleStep, const double Dist
 	const int d3 = (int) (floor ((double)f[2] / (double)AngleStep));
 	const int d4 = (int) (floor ((double)f[3] / (double)DistanceStep));
 
-	//printf("f4: %f, d4: %d\n", f[3], d4);
+	//printf("%d, %d, %d,%d\n",d1,d2,d3,d4);
 	
 	return (d1 | (d2<<8) | (d3<<16) | (d4<<24));
 }
@@ -329,7 +339,7 @@ int hash_ppf(const double f[4], const double AngleStep, const double DistanceSte
 	const int d4 = (int) (floor ((double)f[3] / (double)DistanceStep));
 	int key[4]={d1,d2,d3,d4};
 	int hashKey=0;
-	MurmurHash3_x86_32(key, 4, 42, &hashKey);
+	MurmurHash3_x86_32(key, 4*sizeof(int), 42, &hashKey);
 	return hashKey;
 }
 
@@ -428,12 +438,15 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
     double angleStepRadians = (360.0/angle_step_relative)*PI/180.0;
 
-	tommy_hashtable* hashTable = (tommy_hashtable*)malloc(sizeof(tommy_hashtable));
-	// 262144 = 2^18
 	int size = next_power_of_two(sampled.rows*sampled.rows);
-	tommy_hashtable_init(hashTable, size);
 
-	//hashtable_int* hashTable = hashtable_int_create(sampled.rows*sampled.rows, NULL);
+#if defined (USE_TOMMY_HASHTABLE)
+	tommy_hashtable* hashTable = (tommy_hashtable*)malloc(sizeof(tommy_hashtable));
+	// 262144 = 2^18	
+	tommy_hashtable_init(hashTable, size);
+#else
+	hashtable_int* hashTable = hashtable_int_create(size, NULL);
+#endif
 	
 	*Model3D = new TPPFModelPC();
 
@@ -451,7 +464,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 		const double n1[4] = {f1[3], f1[4], f1[5], 0};
 
 		//printf("///////////////////// NEW REFERENCE ////////////////////////\n");
-		for (int j=0; j<sampled.rows; j++)
+		for (int j=0; j<numRefPoints; j++)
 		{
 			// cannnot compute the ppf with myself
 			if (i!=j)
@@ -462,23 +475,36 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
 				double f[4]={0};
 				compute_ppf_features(p1, n1, p2, n2, f);
-				unsigned int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
+				//unsigned int hashValue = hash_ppf_simple(f, angleStepRadians, distanceStep);
+				unsigned int hashValue = hash_ppf(f, angleStepRadians, distanceStep);
 				double alpha = compute_alpha(p1, n1, p2);
 				unsigned int corrInd = i*numRefPoints+j;
 				unsigned int ppfInd = corrInd*ppfStep;
 
-				//hashtable_int_insert(hashTable, hash, (void*)corrInd);
+				THash* hashNode = (THash*)calloc(1, sizeof(THash));
+				hashNode->id = hashValue;
+				//hashNode->data = (void*)corrInd;
+				hashNode->i = i;
+				hashNode->j = j;
+				hashNode->ppfInd = ppfInd;
+
+#if defined(USE_TOMMY_HASHTABLE)
+				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, (hashNode->id));
+#else
+				hashtable_int_insert_hashed(hashTable, hashValue, (void*)hashNode);
+#endif
 				//printf("%f %f %f %f \n", f[0], f[1], f[2], f[3]);
 				//printf("F:%f, %f, %f, %f .... Alpha: %f, Hash: %d\n", f[0], f[1], f[2], f[3], alpha, hash);
 				//printf("Alpha: %f\n", alpha);
 
-				THash* hashNode = (THash*)calloc(1, sizeof(THash));
+				/*THash* hashNode = (THash*)calloc(1, sizeof(THash));
 				hashNode->id = hash;
 				//hashNode->data = (void*)corrInd;
 				hashNode->i = i;
 				hashNode->j = j;
 				hashNode->ppfInd = ppfInd;
-				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashNode->id));
+				//tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashNode->id));
+				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, (hashNode->id));*/
 
 				float* ppfRow = (float*)(&(*Model3D)->PPF.data[ ppfInd ]);
 				ppfRow[0] = f[0];
@@ -488,6 +514,8 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 				ppfRow[4] = (float)alpha;
 			}
 		}
+
+		printf("Training reference : %d\n", i);
 	}
 
 	//*Model3D = (TPPFModelPC*)calloc(1, sizeof(TPPFModelPC));
@@ -499,6 +527,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	(*Model3D)->ppfStep = ppfStep;
 	(*Model3D)->numRefPoints = numRefPoints;
 	(*Model3D)->sampling_step_relative = sampling_step_relative;
+	(*Model3D)->sampledPC = sampled;
 	
 	return Mat();
 }
@@ -675,7 +704,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	int numRefPoints = ppfModel->numRefPoints;
 	unsigned int n = numRefPoints;
 	PPFPose** poseList;
-	int sceneSamplingStep = 5, c = 0;
+	int sceneSamplingStep = SampleStep, c = 0;
 
 	// compute bbox
 	float xRange[2], yRange[2], zRange[2];
@@ -733,7 +762,8 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 				
 				double f[4]={0};
 				compute_ppf_features(p1, n1, p2, n2, f);
-				unsigned int hash = hash_ppf_simple(f, angleStepRadians, distanceStep);
+				//unsigned int hashValue = hash_ppf_simple(f, angleStepRadians, distanceStep);
+				unsigned int hashValue = hash_ppf(f, angleStepRadians, distanceStep);
 
 				// we don't need to call this here, as we already estimate the tsg from scene reference point
 				//double alpha = compute_alpha(p1, n1, p2);
@@ -751,17 +781,22 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 				if (sin(alpha_scene)*p2t[2]<0.0)
 					alpha_scene=-alpha_scene;
 
-				//hashtable_int_insert(hashTable, hash, (void*)corrInd);
-				//printf("%f %f %f %f \n", f[0], f[1], f[2], f[3]);
-				//printf("%d\n", hash);
+				alpha_scene=-alpha_scene;
 
-				tommy_hashtable_node* node = tommy_hashtable_bucket(ppfModel->hashTable, tommy_inthash_u32(hash));
+
+#if defined (USE_TOMMY_HASHTABLE)
+				tommy_hashtable_node* node = tommy_hashtable_bucket(ppfModel->hashTable, (hashValue));
+#else
+				hashnode_i* node = hashtable_int_get_bucket_hashed(ppfModel->hashTable, (hashValue));
+#endif
+				//tommy_hashtable_node* node = tommy_hashtable_bucket(ppfModel->hashTable, (hash));
 
 				int numNodes = 0;
 				while (node)
 				{
 					THash* tData = (THash*) node->data;
 					int corrI = (int)tData->i;
+					//int corrI = (int)tData->j;
 					//int corrJ = (int)tData->j;
 					int ppfInd = (int)tData->ppfInd;
 					//int corrInd = (int)tData->i*sampledStep+j;
@@ -777,6 +812,8 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 						So the quantization would be :
 						numAngles * (alpha+2pi)/(4pi)
 					*/
+
+					//printf("%f\n", alpha);
 					
 					int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 
@@ -825,7 +862,9 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 								};
 
 		// TODO : Compute pose
-		float* fMax = (float*)(&ppfModel->PPF.data[max_votes_i * ppfModel->PPF.step]);
+		//unsigned int corrInd = i*numRefPoints+j;
+		//unsigned int ppfInd = corrInd*ppfStep;
+		float* fMax = (float*)(&ppfModel->sampledPC.data[max_votes_i * ppfModel->sampledStep]);
 		const double pMax[4] = {fMax[0], fMax[1], fMax[2], 1};
 		const double nMax[4] = {fMax[3], fMax[4], fMax[5], 1};
 		double pose[4][4];
@@ -853,11 +892,10 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		double Temp[16]={0};
 		double Pose[16]={0};
 		matrix_product44(Talpha, Tmg, Temp);
+		matrix_product44(TsgInv, Temp, Pose);
 
 		PPFPose *ppf = new PPFPose(alpha, max_votes_i, max_votes);
 		
-		matrix_product44(TsgInv, Temp, Pose);
-
 		ppf->update_pose(Pose);
 
 		/*for (int jm=0; jm<4; jm++)
@@ -866,7 +904,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 
 		poseList[c++] = ppf;
 
-		//printf("Model Reference: %d, Alpha Index: %d, Alpha: %f\n", max_votes_i, max_votes_j, alpha);
+		printf("Model Reference: %d, Alpha Index: %d, Alpha: %f\n", max_votes_i, max_votes_j, alpha);
 
 		if (alpha_index==15)
 		{
@@ -883,9 +921,9 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		}
 	}
 
-	double RotationThreshold = (20.0 / 180.0 * M_PI);
-	double PositionThreshold = 0.1f;
-	double MinMatchScore = 0.75;
+	double RotationThreshold = (30.0 / 180.0 * M_PI);
+	double PositionThreshold = 0.01f;
+	double MinMatchScore = 0.5;
 	//vector < PPFPose* > results;
 	
 	cluster_poses(poseList, c, PositionThreshold, RotationThreshold, MinMatchScore, results);
@@ -902,7 +940,7 @@ int main()
 	//Mat pc = Mat(100,100,CV_32FC1);
 
 	TPPFModelPC* ppfModel = 0;
-	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 20, &ppfModel);
+	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
 
 	vector < PPFPose* > results;
 	t_match_pc_ppf(pc, 15, 5, ppfModel, results);
@@ -911,12 +949,8 @@ int main()
 	for (int i=0; i<MIN(5, results.size()); i++)
 	{
 		PPFPose* pose = results[i];
-		Mat pct = transform_pc_pose(pc, pose->Pose);
-	
-		visualize_registration(pc, pct, "Registration");
-
-		// also print the pose
-
+		
+		// Print the pose
 		printf("Pose %d : Voted by %d, Alpha is %f\n", i, pose->numVotes, pose->alpha);
 		for (int j=0; j<4; j++)
 		{
@@ -927,6 +961,10 @@ int main()
 			printf("\n");
 		}
 		printf("\n");
+
+		// Visualize registration
+		Mat pct = transform_pc_pose(pc, pose->Pose);
+		visualize_registration(pc, pct, "Registration");
 	}
 
 	/*for (int i=0; i<MIN(3, results.size()); i++)

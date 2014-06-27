@@ -249,7 +249,7 @@ extern "C" {
 		// we try to project on the ground plane but it's already parallel
 		if (n1[1]==0 && n1[2]==0)
 		{
-			axis[0]=0; axis[1]=1; axis[2]=0;
+			axis[1]=1; axis[2]=0;
 		}
 		else
 		{	

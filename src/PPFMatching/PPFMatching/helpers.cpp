@@ -384,11 +384,11 @@ Mat transform_pc_pose(Mat pc, double Pose[16])
 		matrix_product441(Pose, p, p2);
 
 		// p2[3] should normally be 1
-		if (abs(p2[3])>EPS)
+		if (fabs(p2[3])>EPS)
 		{
-			pcDataT[0] = (float)p2[0]/p2[3];
-			pcDataT[1] = (float)p2[1]/p2[3];
-			pcDataT[2] = (float)p2[2]/p2[3];
+			pcDataT[0] = (float)(p2[0]/p2[3]);
+			pcDataT[1] = (float)(p2[1]/p2[3]);
+			pcDataT[2] = (float)(p2[2]/p2[3]);
 		}
 
 		// TODO : ROTATE THE NORMALS AS WELL

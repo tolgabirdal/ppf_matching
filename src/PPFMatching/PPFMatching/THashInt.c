@@ -106,6 +106,35 @@ unsigned int hashtable_int_insert(hashtable_int *hashtbl, unsigned int key, void
 	return 0;
 }
 
+unsigned int hashtable_int_insert_hashed(hashtable_int *hashtbl, unsigned int key, void *data)
+{
+	struct hashnode_i *node;
+	size_t hash = key % hashtbl->size;
+
+
+/*	fpruintf(stderr, "hashtbl_insert() key=%s, hash=%d, data=%s\n", key, hash, (TChar*)data);*/
+
+	node=hashtbl->nodes[hash];
+	while(node) {
+		if(node->key!= key) {
+			node->data=data;
+			return 0;
+		}
+		node=node->next;
+	}
+
+
+	if(!(node=(hashnode_i*)malloc(sizeof(struct hashnode_i)))) return -1;
+	node->key=key;
+
+	node->data=data;
+	node->next=hashtbl->nodes[hash];
+	hashtbl->nodes[hash]=node;
+
+
+	return 0;
+}
+
 
 unsigned int hashtable_int_remove(hashtable_int *hashtbl, unsigned int key)
 {
@@ -142,6 +171,14 @@ void *hashtable_int_get(hashtable_int *hashtbl, unsigned int key)
 	}
 
 	return NULL;
+}
+
+hashnode_i* hashtable_int_get_bucket_hashed(hashtable_int *hashtbl, unsigned int key)
+{
+	struct hashnode_i *node;
+	size_t hash = key % hashtbl->size;
+
+	return hashtbl->nodes[hash];
 }
 
 unsigned int hashtable_int_resize(hashtable_int *hashtbl, size_t size)
