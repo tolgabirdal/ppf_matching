@@ -122,7 +122,7 @@ extern "C" {
 	}*/
 
 
-	static __inline void compute_axis_angle_yz(double angle, const double r[3], double row2[3], double row3[3])
+	static __inline void aa_to_R_yz(double angle, const double r[3], double row2[3], double row3[3])
 	{
 		const double sinA=sin(angle);
 		const double cosA=cos(angle);
@@ -140,7 +140,7 @@ extern "C" {
 		row3[0] += r[2] * r[0] * cos1A;  row3[1] += r[2] * r[1] * cos1A; row3[2] += r[2] * r[2] * cos1A;
 	}
 
-	static __inline void compute_axis_angle(double angle, const double r[3], double R[9])
+	static __inline void aa_to_R(double angle, const double r[3], double R[9])
 	{
 		const double sinA=sin(angle);
 		const double cosA=cos(angle);
@@ -169,38 +169,26 @@ extern "C" {
 	{
 		const double sinA=sin(angle);
 		const double cosA=cos(angle);
-		const double cos1A=(1-cosA);
 		double *row1 = &R[0];
 		double *row2 = &R[3];
 		double *row3 = &R[6];
 
-		row1[0] =  cosA;  row1[1] = 0.0f; row1[2] =  0.f; 
-		row2[0] =  0.f;  row2[1] = cosA; row2[2] =  0.f; 
-		row3[0] =  0.f;  row3[1] =  0.f; row3[2] = cosA; 
-
-		row2[2] += -sinA;
-		row3[1] +=  sinA;
-
-		row1[0] += cos1A;
+		row1[0] =  1;  row1[1] = 0.0f; row1[2] =  0.f; 
+		row2[0] =  0.f;  row2[1] = cosA; row2[2] =  -sinA; 
+		row3[0] =  0.f;  row3[1] =  sinA; row3[2] = cosA; 
 	}
 
 	static __inline void get_unit_x_rotation_44(double angle, double T[16])
 	{
 		const double sinA=sin(angle);
 		const double cosA=cos(angle);
-		const double cos1A=(1-cosA);
 		double *row1 = &T[0];
 		double *row2 = &T[4];
 		double *row3 = &T[8];
 
-		row1[0] =  cosA;  row1[1] = 0.0f; row1[2] =  0.f; 
-		row2[0] =  0.f;  row2[1] = cosA; row2[2] =  0.f; 
-		row3[0] =  0.f;  row3[1] =  0.f; row3[2] = cosA; 
-
-		row2[2] += -sinA;
-		row3[1] +=  sinA;
-
-		row1[0] += cos1A;
+		row1[0] =  1;  row1[1] = 0.0f; row1[2] =  0.f; 
+		row2[0] =  0.f;  row2[1] = cosA; row2[2] =  -sinA; 
+		row3[0] =  0.f;  row3[1] =  sinA; row3[2] = cosA; 
 
 		T[15] = 1;
 	}
@@ -227,7 +215,7 @@ extern "C" {
 			}
 		}
 
-		compute_axis_angle_yz(angle, axis, row2, row3);
+		aa_to_R_yz(angle, axis, row2, row3);
 
 		t[1] = row2[0] * (-p1[0]) + row2[1] * (-p1[1]) + row2[2] * (-p1[2]);
 		t[2] = row3[0] * (-p1[0]) + row3[1] * (-p1[1]) + row3[2] * (-p1[2]);
@@ -235,7 +223,10 @@ extern "C" {
 
 	static __inline void compute_transform_rt(const double p1[4], const double n1[4], double R[9], double t[3])
 	{
+		// dot product with x axis
 		double angle=acos( n1[0] );
+
+		// cross product with x axis
 		double axis[3]={0, n1[2], -n1[1]};
 		double axisNorm;
 		double *row1, *row2, *row3;
@@ -256,7 +247,7 @@ extern "C" {
 			}
 		}
 
-		compute_axis_angle(angle, axis, R);
+		aa_to_R(angle, axis, R);
 		row1 = &R[0];
 		row2 = &R[3];
 		row3 = &R[6];

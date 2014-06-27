@@ -890,7 +890,7 @@ int main_rt()
 	printf("\n\n");
 	memset(R,0,sizeof(double)*16);
 	//axis_angle_to_matrix(r, angle, R);
-	compute_axis_angle(angle, r, R);
+	aa_to_R(angle, r, R);
 	for (int i=0; i<9; i++)
 		printf("%f,", R[i]);
 
