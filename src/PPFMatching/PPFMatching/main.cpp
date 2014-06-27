@@ -693,8 +693,6 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	int i;
 	int numNeighbors = 1000;
 	int numAngles = (int) (floor (2 * M_PI / ppfModel->angleStep));
-	int max_votes_i = 0, max_votes_j = 0;
-	int max_votes = 0;
 	unsigned int* accumulator;
 	cvflann::Index<Distance_32F>* flannIndex;
 	float angleStepRadians = ppfModel->angleStep;
@@ -736,6 +734,9 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 #endif
 	for (i = 0; i < sampled.rows; i += sceneSamplingStep)
 	{
+		unsigned int max_votes_i = 0, max_votes_j = 0;
+		unsigned int max_votes = 0;
+
 		int j;
 
 		float* f1 = (float*)(&sampled.data[i * sampled.step]);
@@ -819,12 +820,12 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 
 					unsigned int accIndex = corrI * numAngles + alpha_index;
 #if defined T_OPENMP
-#pragma omp atomic
-#endif
+#pragma omp critical
 					accumulator[accIndex]++;
-
 					node = node->next;
-					numNodes++;
+#endif
+
+					//numNodes++;
 				}
 				//printf("%d\n", numNodes);
 			}
@@ -872,7 +873,6 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		compute_transform_rt(pMax, nMax, Rmg, tmg);
 		row1=&Rsg[0]; row2=&Rsg[3]; row3=&Rsg[6];
 
-
 		double Tmg[16] =	{	Rmg[0], Rmg[1], Rmg[2], tmg[0],
 								Rmg[3], Rmg[4], Rmg[5], tmg[1],
 								Rmg[6], Rmg[7], Rmg[8], tmg[2],
@@ -884,11 +884,12 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		// int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 		int alpha_index = max_votes_j;
 		double alpha = (alpha_index*(4*PI))/numAngles-2*PI;
+		//alpha=-alpha;
 
 		// Equation 2:
 		double Talpha[16]={0};
 		get_unit_x_rotation_44(alpha, Talpha);
-
+		
 		double Temp[16]={0};
 		double Pose[16]={0};
 		matrix_product44(Talpha, Tmg, Temp);

@@ -200,7 +200,7 @@ extern "C" {
 		row2[0] =  0.f;  row2[1] = cosA; row2[2] =  -sinA; 
 		row3[0] =  0.f;  row3[1] =  sinA; row3[2] = cosA; 
 
-		T[15] = 1;
+		T[3]=0; T[7]=0; T[11]=0; T[15] = 1;
 	}
 
 	// compute the yz components of the transformation needed to rotate n1 onto x axis and p1 to origin
