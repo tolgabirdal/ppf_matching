@@ -203,6 +203,7 @@ extern "C" {
 		T[15] = 1;
 	}
 
+	// compute the yz components of the transformation needed to rotate n1 onto x axis and p1 to origin
 	static __inline void compute_transform_rt_yz(const double p1[4], const double n1[4], double row2[3], double row3[3], double t[3])
 	{
 		// dot product with x axis
@@ -215,7 +216,7 @@ extern "C" {
 		// we try to project on the ground plane but it's already parallel
 		if (n1[1]==0 && n1[2]==0)
 		{
-			axis[0]=0; axis[1]=1; axis[2]=0;
+			axis[1]=1; axis[2]=0;
 		}
 		else
 		{	
@@ -234,6 +235,7 @@ extern "C" {
 		t[2] = row3[0] * (-p1[0]) + row3[1] * (-p1[1]) + row3[2] * (-p1[2]);
 	}
 
+	// compute the transformation needed to rotate n1 onto x axis and p1 to origin
 	static __inline void compute_transform_rt(const double p1[4], const double n1[4], double R[9], double t[3])
 	{
 		// dot product with x axis

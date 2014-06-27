@@ -314,6 +314,8 @@ int hash_ppf_simple(const double f[4], const double AngleStep, const double Dist
 	const int d2 = (int) (floor ((double)f[1] / (double)AngleStep));
 	const int d3 = (int) (floor ((double)f[2] / (double)AngleStep));
 	const int d4 = (int) (floor ((double)f[3] / (double)DistanceStep));
+
+	//printf("f4: %f, d4: %d\n", f[3], d4);
 	
 	return (d1 | (d2<<8) | (d3<<16) | (d4<<24));
 }
@@ -351,6 +353,8 @@ double compute_alpha(const double p1[4], const double n1[4], const double p2[4])
 
 	compute_transform_rt_yz(p1, n1, row2, row3, Tmg);
 
+	// checked row2, row3: They are correct
+	
 	mpt[1] = Tmg[1] + row2[0] * p2[0] + row2[1] * p2[1] + row2[2] * p2[2];
     mpt[2] = Tmg[2] + row3[0] * p2[0] + row3[1] * p2[1] + row3[2] * p2[2];
 
@@ -671,7 +675,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	int numRefPoints = ppfModel->numRefPoints;
 	unsigned int n = numRefPoints;
 	PPFPose** poseList;
-	int sceneSamplingStep = 15, c = 0;
+	int sceneSamplingStep = 5, c = 0;
 
 	// compute bbox
 	float xRange[2], yRange[2], zRange[2];
@@ -763,7 +767,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 					//int corrInd = (int)tData->i*sampledStep+j;
 					float* ppfCorrScene = (float*)(&ppfModel->PPF.data[ppfInd]);
 					double alpha_model = (double)ppfCorrScene[T_PPF_LENGTH-1];
-					double alpha = alpha_scene - alpha_model;
+					double alpha = alpha_model - alpha_scene;
 					//unsigned int hashInd = corrI*numRefPoints + corrJ;
 					
 
@@ -829,6 +833,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		compute_transform_rt(pMax, nMax, Rmg, tmg);
 		row1=&Rsg[0]; row2=&Rsg[3]; row3=&Rsg[6];
 
+
 		double Tmg[16] =	{	Rmg[0], Rmg[1], Rmg[2], tmg[0],
 								Rmg[3], Rmg[4], Rmg[5], tmg[1],
 								Rmg[6], Rmg[7], Rmg[8], tmg[2],
@@ -861,7 +866,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 
 		poseList[c++] = ppf;
 
-		printf("Model Reference: %d, Alpha Index: %d, Alpha: %f\n", max_votes_i, max_votes_j, alpha);
+		//printf("Model Reference: %d, Alpha Index: %d, Alpha: %f\n", max_votes_i, max_votes_j, alpha);
 
 		if (alpha_index==15)
 		{
@@ -879,8 +884,8 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	}
 
 	double RotationThreshold = (20.0 / 180.0 * M_PI);
-	double PositionThreshold = 0.2f;
-	double MinMatchScore = 0.5;
+	double PositionThreshold = 0.1f;
+	double MinMatchScore = 0.75;
 	//vector < PPFPose* > results;
 	
 	cluster_poses(poseList, c, PositionThreshold, RotationThreshold, MinMatchScore, results);
@@ -897,19 +902,33 @@ int main()
 	//Mat pc = Mat(100,100,CV_32FC1);
 
 	TPPFModelPC* ppfModel = 0;
-	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
+	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 20, &ppfModel);
 
 	vector < PPFPose* > results;
 	t_match_pc_ppf(pc, 15, 5, ppfModel, results);
 
+	// debug first five poses
 	for (int i=0; i<MIN(5, results.size()); i++)
 	{
-		Mat pct = transform_pc_pose(pc, results[i]->Pose);
+		PPFPose* pose = results[i];
+		Mat pct = transform_pc_pose(pc, pose->Pose);
 	
 		visualize_registration(pc, pct, "Registration");
+
+		// also print the pose
+
+		printf("Pose %d : Voted by %d, Alpha is %f\n", i, pose->numVotes, pose->alpha);
+		for (int j=0; j<4; j++)
+		{
+			for (int k=0; k<4; k++)
+			{
+				printf("%f ", pose->Pose[j*4+k]);
+			}
+			printf("\n");
+		}
+		printf("\n");
 	}
 
-	// print first three poses
 	/*for (int i=0; i<MIN(3, results.size()); i++)
 	{
 		PPFPose* pose = results[i];

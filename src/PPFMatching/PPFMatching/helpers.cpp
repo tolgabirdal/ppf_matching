@@ -199,8 +199,8 @@ Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], 
 			{
 				float zbox[2] = {pdz, dz};
 				int j;
-				float px=0, py=0, pz=0;
-				float nx=0, ny=0, nz=0;
+				double px=0, py=0, pz=0;
+				double nx=0, ny=0, nz=0;
 				std::vector<float*> results;
 				float *pcData = (float*)(&pcSampled.data[c*pcSampled.step[0]]);
 
@@ -212,44 +212,51 @@ Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], 
 					{
 						for (j=0; j<results.size(); j++)
 						{
-							px += results[j][0];
-							py += results[j][1];
-							pz += results[j][2];
+							px += (double)results[j][0];
+							py += (double)results[j][1];
+							pz += (double)results[j][2];
 						}
 
-						px/=(float)results.size();
-						py/=(float)results.size();
-						pz/=(float)results.size();
+						px/=(double)results.size();
+						py/=(double)results.size();
+						pz/=(double)results.size();
 
-						pcData[0]=px;
-						pcData[1]=py;
-						pcData[2]=pz;
+						pcData[0]=(float)px;
+						pcData[1]=(float)py;
+						pcData[2]=(float)pz;
 					}
 					else
 					{
 						for (j=0; j<results.size(); j++)
 						{
-							px += results[j][0];
-							py += results[j][1];
-							pz += results[j][2];
-							nx += results[j][3];
-							ny += results[j][4];
-							nz += results[j][5];
+							px += (double)results[j][0];
+							py += (double)results[j][1];
+							pz += (double)results[j][2];
+							nx += (double)results[j][3];
+							ny += (double)results[j][4];
+							nz += (double)results[j][5];
 						}
 
-						px/=(float)results.size();
-						py/=(float)results.size();
-						pz/=(float)results.size();
-						nx/=(float)results.size();
-						ny/=(float)results.size();
-						nz/=(float)results.size();
+						px/=(double)results.size();
+						py/=(double)results.size();
+						pz/=(double)results.size();
+						nx/=(double)results.size();
+						ny/=(double)results.size();
+						nz/=(double)results.size();
 
-						pcData[0]=px;
-						pcData[1]=py;
-						pcData[2]=pz;
-						pcData[3]=nx;
-						pcData[4]=ny;
-						pcData[5]=nz;
+						pcData[0]=(float)px;
+						pcData[1]=(float)py;
+						pcData[2]=(float)pz;
+
+						// normalize the normals
+						double norm = sqrt(nx*nx+ny*ny+nz*nz);
+						
+						if (norm>EPS)
+						{
+							pcData[3]=(float)(nx/norm);
+							pcData[4]=(float)(ny/norm);
+							pcData[5]=(float)(nz/norm);
+						}
 					}
 
 					c++;
