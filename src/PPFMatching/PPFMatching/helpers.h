@@ -29,6 +29,9 @@ extern "C" {
 	Mat normalize_pc(Mat pc, float scale);
 	Mat transform_pc_pose(Mat pc, double Pose[16]);
 
+	void generate_random_pose(double Pose[16]);
+
+
 #if defined (__cplusplus)
 }
 #endif

@@ -3,10 +3,11 @@
 #define __UTILS_H_
 
 #include <math.h>
+#include <stdio.h>
 
 #define EPS		1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
 
-#define T_OPENMP // define this if OpenMP is desired
+//#define T_OPENMP // define this if OpenMP is desired
 
 #ifndef PI
 #ifdef  M_PI
@@ -123,6 +124,53 @@ extern "C" {
 		R[1] = A[4] * B[0] + A[5] * B[1] + A[6] * B[2] + A[7] * B[3];
 		R[2] = A[8] * B[0] + A[9] * B[1] + A[10] * B[2] + A[11] * B[3];
 		R[3] = A[12] * B[0] + A[13] * B[1] + A[14] * B[2] + A[15] * B[3];
+	}
+
+	static __inline void matrix_print(double *A, int m, int n) 
+	{
+		int i, j;
+
+		for (i = 0; i < m; i++) {
+			printf("  ");
+			for (j = 0; j < n; j++) {
+				printf(" %0.6f ", A[i * n + j]);
+			}
+			printf("\n");
+		}
+	}
+
+	static __inline void rt_to_pose(const double R[9], const double t[3], double Pose[16])
+	{
+		Pose[0]=R[0];
+		Pose[1]=R[1];
+		Pose[2]=R[2];
+		Pose[4]=R[3];
+		Pose[5]=R[4];
+		Pose[6]=R[5];
+		Pose[8]=R[6];
+		Pose[9]=R[7];
+		Pose[10]=R[8];
+		Pose[3]=t[0];
+		Pose[7]=t[1];
+		Pose[11]=t[2];
+	}
+
+	
+	static __inline void pose_to_rt(const double Pose[16], double R[9], double t[3])
+	{
+		R[0] = Pose[0];
+		R[1] = Pose[1];
+		R[2] = Pose[2];
+		R[3] = Pose[4];
+		R[4] = Pose[5];
+		R[5] = Pose[6];
+		R[6] = Pose[8];
+		R[7] = Pose[9];
+		R[8] = Pose[10];
+
+		t[0]=Pose[3];
+		t[1]=Pose[7];
+		t[2]=Pose[11];
 	}
 
 

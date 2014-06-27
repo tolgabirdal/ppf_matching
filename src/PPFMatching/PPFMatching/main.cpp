@@ -129,6 +129,26 @@ public:
 		else							 {angle = ( acos((trace - 1)/2) ); }
 	}
 
+	PPFPose* clone()
+	{
+		PPFPose* pose = new PPFPose(alpha, modelIndex, numVotes);
+		for (int i=0; i<16; i++)
+			pose->Pose[i]= Pose[i];
+
+		pose->q[0]=q[0];
+		pose->q[1]=q[1];
+		pose->q[2]=q[2];
+		pose->q[3]=q[3];
+
+		pose->t[0]=t[0];
+		pose->t[1]=t[1];
+		pose->t[2]=t[2];
+
+		pose->angle=angle;
+
+		return pose;
+	}
+
 	int write_pose(FILE* f)
 	{
 		int POSE_MAGIC = 7673;
@@ -251,7 +271,6 @@ public:
 	double sampling_step_relative;
 	Mat inputPC, sampledPC, PPF;
 	cvflann::Index<Distance_32F>* flannIndex;
-	//Mat alpha_m;
 	int n, numRefPoints, sampledStep, ppfStep;
 #if defined (USE_TOMMY_HASHTABLE)
 	tommy_hashtable* hashTable;
@@ -497,18 +516,6 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 #else
 				hashtable_int_insert_hashed(hashTable, hashValue, (void*)hashNode);
 #endif
-				//printf("%f %f %f %f \n", f[0], f[1], f[2], f[3]);
-				//printf("F:%f, %f, %f, %f .... Alpha: %f, Hash: %d\n", f[0], f[1], f[2], f[3], alpha, hash);
-				//printf("Alpha: %f\n", alpha);
-
-				/*THash* hashNode = (THash*)calloc(1, sizeof(THash));
-				hashNode->id = hash;
-				//hashNode->data = (void*)corrInd;
-				hashNode->i = i;
-				hashNode->j = j;
-				hashNode->ppfInd = ppfInd;
-				//tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashNode->id));
-				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, (hashNode->id));*/
 
 				float* ppfRow = (float*)(&(*Model3D)->PPF.data[ ppfInd ]);
 				ppfRow[0] = f[0];
@@ -519,7 +526,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 			}
 		}
 
-		printf("Training reference : %d\n", i);
+		//printf("Training reference : %d\n", i);
 	}
 
 	//*Model3D = (TPPFModelPC*)calloc(1, sizeof(TPPFModelPC));
@@ -549,29 +556,8 @@ bool match_pose(const PPFPose sourcePose, const PPFPose targetPose, const double
 	const double* Pose = sourcePose.Pose;
 	const double* PoseT = targetPose.Pose;
 	double dv[3] = {targetPose.t[0]-sourcePose.t[0], targetPose.t[1]-sourcePose.t[1], targetPose.t[2]-sourcePose.t[2]};
-	//double dNorm = dv[0]*dv[0]+dv[1]*dv[1]+dv[2]*dv[2];
-	double dNorm = dv[0]*dv[0];
-	dNorm += dv[1] * dv[1];
-	dNorm += dv[2] * dv[2];
-	dNorm=sqrt(dNorm);
-
-	// angle is precomputed, so we don't need those.
-	/*
-	double Rinv1[9] ={	Pose[0], Pose[4], Pose[8],
-						Pose[1], Pose[5], Pose[9],
-						Pose[2], Pose[6], Pose[10]
-					};
-
-	double R2[9] =	{	PoseT[0], PoseT[1], PoseT[2],
-						PoseT[4], PoseT[5], PoseT[6],
-						PoseT[8], PoseT[9], PoseT[10]
-					};
-		double R[9]={0};
-	matrix_product33(Rinv1, R2, R);
-	const double trace = R[0] + R[4] + R[8];
-	const double phi = fabs ( acos((trace - 1)/2) );
-	*/
-
+	double dNorm = sqrt(dv[0]*dv[0]+dv[1]*dv[1]+dv[2]*dv[2]);
+	
 	const double phi = fabs ( sourcePose.angle - targetPose.angle );
 
 	return (phi<RotationThreshold && dNorm < PositionThrehsold);
@@ -588,23 +574,6 @@ int sort_pose_clusters (const PoseCluster* a, const PoseCluster* b)
 {
    return ( a->numVotes > b->numVotes );
 }
-
-void rt_to_pose(const double R[9], const double t[3], double Pose[16])
-{
-	Pose[0]=R[0];
-	Pose[1]=R[1];
-	Pose[2]=R[2];
-	Pose[4]=R[3];
-	Pose[5]=R[4];
-	Pose[6]=R[5];
-	Pose[8]=R[6];
-	Pose[9]=R[7];
-	Pose[10]=R[8];
-	Pose[3]=t[0];
-	Pose[7]=t[1];
-	Pose[11]=t[2];
-}
-
 
 int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionThreshold, const double RotationThreshold, const double MinMatchScore, vector < PPFPose* >& finalPoses)
 {
@@ -680,7 +649,7 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 		curPoses[0]->numVotes=curCluster->numVotes;
 
 		//finalPoses.push_back(curPoses[0]);
-		finalPoses[i]=curPoses[0];
+		finalPoses[i]=curPoses[0]->clone();
 
 		// we won't need this
 		delete poseClusters[i];
@@ -801,22 +770,16 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 #else
 				hashnode_i* node = hashtable_int_get_bucket_hashed(ppfModel->hashTable, (hashValue));
 #endif
-				//tommy_hashtable_node* node = tommy_hashtable_bucket(ppfModel->hashTable, (hash));
 
-				int numNodes = 0;
+				//int numNodes = 0;
 				while (node)
 				{
 					THash* tData = (THash*) node->data;
 					int corrI = (int)tData->i;
-					//int corrI = (int)tData->j;
-					//int corrJ = (int)tData->j;
 					int ppfInd = (int)tData->ppfInd;
-					//printf("ppfInd - %d\n",ppfInd);
-					//int corrInd = (int)tData->i*sampledStep+j;
 					float* ppfCorrScene = (float*)(&ppfModel->PPF.data[ppfInd]);
 					double alpha_model = (double)ppfCorrScene[T_PPF_LENGTH-1];
 					double alpha = alpha_model - alpha_scene;
-					//unsigned int hashInd = corrI*numRefPoints + corrJ;
 					
 
 					/*  Map alpha to the indices:
@@ -826,8 +789,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 						numAngles * (alpha+2pi)/(4pi)
 					*/
 
-					//printf("%f\n", alpha);
-					
+					//printf("%f\n", alpha);					
 					int alpha_index = (int)(numAngles*(alpha + 2*PI) / (4*PI));
 
 					unsigned int accIndex = corrI * numAngles + alpha_index;
@@ -854,12 +816,12 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 					refIndMax = k;
 					alphaIndMax = j;
 				}
+				
 #if !defined (T_OPENMP)
 				accumulator[accInd ] = 0;
 #endif
 			}
 		}
-
 
 		// invert Tsg : Luckily rotation is orthogonal: Inverse = Transpose.
 		// We are not required to invert.
@@ -888,7 +850,6 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 								0, 0, 0, 1
 							};
 
-
 		// convert alpha_index to alpha
 		int alpha_index = alphaIndMax;
 		double alpha = (alpha_index*(4*PI))/numAngles-2*PI;
@@ -916,12 +877,23 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 #endif
 	}
 
-	double RotationThreshold = (30.0 / 180.0 * M_PI);
-	double PositionThreshold = 0.01f;
+	// TODO : Make the parameters relative if not arguments.
+	double RotationThreshold = (20.0 / 180.0 * M_PI);
+	double PositionThreshold = 0.05f;
 	double MinMatchScore = 0.5;
 	
-	printf("Will cluster now\n");
-	cluster_poses(poseList, sampled.rows/sceneSamplingStep, PositionThreshold, RotationThreshold, MinMatchScore, results);
+	int numPosesAdded = sampled.rows/sceneSamplingStep;
+	cluster_poses(poseList, numPosesAdded, PositionThreshold, RotationThreshold, MinMatchScore, results);
+
+	// free up the used space
+	sampled.release();
+
+	for (int i=0; i<numPosesAdded; i++)
+	{
+		PPFPose* pose = poseList[i];
+		delete pose;
+		poseList[i]=0;
+	}
 
 	free(poseList);
 #if !defined (T_OPENMP)
@@ -938,17 +910,25 @@ int main()
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 	//Mat pc = Mat(100,100,CV_32FC1);
 
-	// Make a sample pose:
-//	generate_random_pose();
-
 	TPPFModelPC* ppfModel = 0;
 	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
 
+	// Make a sample pose:
+	double Pose[16]={0};
+	generate_random_pose(Pose);
+	printf("Random Pose (Ground Truth):\n");
+	matrix_print(Pose, 4,4);	
+
+	Mat pcPerturb = transform_pc_pose(pc, Pose);
+	//Mat pcPerturb = pc.clone();
+
 	int64 tick1 = cv::getTickCount();
 	vector < PPFPose* > results;
-	t_match_pc_ppf(pc, 15, 5, ppfModel, results);
+	t_match_pc_ppf(pcPerturb, 15, 5, ppfModel, results);
 	int64 tick2 = cv::getTickCount();
-	printf("%f\n", (double)(tick2-tick1)/ cv::getTickFrequency());
+	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
+
+	printf("Estimated Poses (Ground Truth):\n");
 
 	// debug first five poses
 	for (int i=0; i<MIN(5, results.size()); i++)
@@ -969,7 +949,7 @@ int main()
 
 		// Visualize registration
 		Mat pct = transform_pc_pose(pc, pose->Pose);
-		visualize_registration(pc, pct, "Registration");
+		visualize_registration(pcPerturb, pct, "Registration");
 	}
 
 	/*for (int i=0; i<MIN(3, results.size()); i++)

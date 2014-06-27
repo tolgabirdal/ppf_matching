@@ -377,6 +377,8 @@ Mat transform_pc_pose(Mat pc, double Pose[16])
 	{
 		float *pcData = (float*)(&pc.data[i*pc.step[0]]);
 		float *pcDataT = (float*)(&pct.data[i*pct.step[0]]);
+		float *n1 = &pcData[3];
+		float *nT = &pcDataT[3];
 
 		double p[4] = {(double)pcData[0], (double)pcData[1], (double)pcData[2], 1};
 		double p2[4];
@@ -391,8 +393,60 @@ Mat transform_pc_pose(Mat pc, double Pose[16])
 			pcDataT[2] = (float)(p2[2]/p2[3]);
 		}
 
-		// TODO : ROTATE THE NORMALS AS WELL
+		// Rotate the normals, too
+		double n[3] = {(double)n1[0], (double)n1[1], (double)n1[2]}, n2[3];
+		//matrix_product441(Pose, n, n2);
+		double R[9], t[3];
+		pose_to_rt(Pose, R, t); 
+		matrix_product331(R, n, n2);
+		double nNorm = sqrt(n2[0]*n2[0]+n2[1]*n2[1]+n2[2]*n2[2]);
+
+		if (nNorm>EPS)
+		{
+			nT[0]=(float)(n2[0]/nNorm);
+			nT[1]=(float)(n2[1]/nNorm);
+			nT[2]=(float)(n2[2]/nNorm);
+		}
 	}
 
 	return pct;
+}
+
+Mat gen_random_mat(int rows, int cols)
+{
+	cv::Mat mean = 0.5*cv::Mat::ones(1,1,CV_64FC1);
+	cv::Mat sigma= 0.5*cv::Mat::ones(1,1,CV_64FC1);
+	cv::RNG rng;
+	cv::Mat matr(rows, cols,CV_64FC1);
+	rng.fill(matr, cv::RNG::NORMAL, mean, sigma);
+
+	return matr;
+}
+
+void generate_random_pose(double Pose[16])
+{
+	Mat S, U, V, R;
+	Mat randR = gen_random_mat(3,3);
+
+	cv::SVDecomp(randR, S, U, V);
+	S = Mat::eye(3, 3, CV_64F);
+	R = U*S*V;
+
+	Mat randT = gen_random_mat(3,1);
+	
+	Pose[0]=R.at<double>(0,0);
+	Pose[1]=R.at<double>(0,1);
+	Pose[2]=R.at<double>(0,2);
+	Pose[4]=R.at<double>(1,0);
+	Pose[5]=R.at<double>(1,1);
+	Pose[6]=R.at<double>(1,2);
+	Pose[8]=R.at<double>(2,0);
+	Pose[9]=R.at<double>(2,1);
+	Pose[10]=R.at<double>(2,2);
+
+	/*Pose[3]=randT.at<double>(0)-0.5;
+	Pose[7]=randT.at<double>(1)-0.5;
+	Pose[11]=randT.at<double>(2)-0.5;*/
+
+	Pose[15] = 1;
 }
