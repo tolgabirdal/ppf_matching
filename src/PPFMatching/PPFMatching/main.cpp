@@ -118,15 +118,9 @@ public:
 		else							 {angle = ( acos((trace - 1)/2) ); }
 	}
 
-	int write_pose(const char* FileName)
+	int write_pose(FILE* f)
 	{
-		FILE* f = fopen(FileNameInfo, "wb");
-
-		if (!f)
-			return -1;
-
 		int POSE_MAGIC = 7673;
-
 		fwrite(&POSE_MAGIC, sizeof(int), 1, f);
 		fwrite(&angle, sizeof(double), 1, f);
 		fwrite(&numVotes, sizeof(int), 1, f);
@@ -134,21 +128,14 @@ public:
 		fwrite(Pose, sizeof(double)*16, 1, f);
 		fwrite(t, sizeof(double)*3, 1, f);
 		fwrite(q, sizeof(double)*4, 1, f);
-
-		fclose(f);
+		return 0;
 	}
 
-	int read_pose(const char* FileName)
+	int read_pose(FILE* f)
 	{
-		FILE* f = fopen(FileNameInfo, "rb");
-
-		if (!f)
-			return -1;
-
 		int POSE_MAGIC = 7673, magic;
-
+		
 		fread(&magic, sizeof(int), 1, f);
-
 		if (magic == POSE_MAGIC)
 		{
 			fread(&angle, sizeof(double), 1, f);
@@ -157,8 +144,36 @@ public:
 			fread(Pose, sizeof(double)*16, 1, f);
 			fread(t, sizeof(double)*3, 1, f);
 			fread(q, sizeof(double)*4, 1, f);
+			return 0;
 		}
+		
+		return -1;
+	}
+
+	int write_pose(const char* FileName)
+	{
+		FILE* f = fopen(FileName, "wb");
+
+		if (!f)
+			return -1;
+
+		int status = write_pose(f);
+
 		fclose(f);
+		return status;
+	}
+
+	int read_pose(const char* FileName)
+	{
+		FILE* f = fopen(FileName, "rb");
+
+		if (!f)
+			return -1;
+
+		int status = read_pose(f);
+		
+		fclose(f);
+		return status;
 	}
 	
 	~PPFPose(){};
@@ -550,21 +565,15 @@ void rt_to_pose(const double R[9], const double t[3], double Pose[16])
 	Pose[10]=R[8];
 	Pose[3]=t[0];
 	Pose[7]=t[1];
-	Pose[11]=t[2];	
+	Pose[11]=t[2];
 }
 
 
 int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionThreshold, const double RotationThreshold, const double MinMatchScore, vector < PPFPose* >& finalPoses)
 {
-	// vector < vector < PPFPose* > > clusters;
-	// vector < std::pair< int,int > > clusterVotes;
-	//vector < PPFPose* > finalPoses;
-
 	vector<PoseCluster*> poseClusters;
 	poseClusters.clear();
 
-//	clusters.clear();
-	//clusterVotes.clear();
 	finalPoses.clear();
 
 	// sort the poses for stability
@@ -576,34 +585,23 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 		bool assigned = false;
 
 		// search all clusters
-		for (int j=0; j<poseClusters.size(); j++)
+		for (int j=0; j<poseClusters.size() && !assigned; j++)
 		{
 			const PPFPose* poseCenter = poseClusters[j]->poseList[0];
 			if (match_pose(*pose, *poseCenter, PositionThreshold, RotationThreshold))
 			{
-				//clusters[j].push_back(pose);
-				//clusterVotes[j].first+=(pose->numVotes);
 				poseClusters[j]->add_pose(pose);
-				//poseClusters[j]->poseList.push_back(pose);
-				//poseClusters[j]->numVotes+=pose->numVotes;
-
 				assigned = true;
-				break;
 			}
 		}
 
 		if (!assigned)
 		{
-			//vector < PPFPose* > newCluster;
-			//newCluster.push_back(pose);
 			poseClusters.push_back ( new PoseCluster(pose));
-			//clusters.push_back(newCluster);
-			//clusterVotes.push_back(std::pair(clusterVotes.size(), pose->numVotes));
 		}
 	}
 
 	// sort the clusters so that we could output multiple hypothesis
-	//std::sort (clusterVotes.begin (), clusterVotes.end (), sort_cluster_cmp);
 	std::sort (poseClusters.begin(), poseClusters.end(), sort_pose_clusters);
 
 	finalPoses.resize(poseClusters.size());
@@ -641,30 +639,17 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 		qAvg[2]/=(double)curSize;
 		qAvg[3]/=(double)curSize;
 
-
-		//quaternion_to_matrix(qAvg, R);
-		//rt_to_pose(R, tAvg, Pose);
-		//curPoses[0]->update_pose(Pose);
-
 		curPoses[0]->update_pose_quat(qAvg, tAvg);
 		curPoses[0]->numVotes=curCluster->numVotes;
-		
-		// retain the better quaternion
-		//curPoses[0]->q[0]=qAvg[0]; curPoses[0]->q[1]=qAvg[1]; 
-		//curPoses[0]->q[2]=qAvg[2]; curPoses[0]->q[3]=qAvg[3]; 
 
 		//finalPoses.push_back(curPoses[0]);
 		finalPoses[i]=curPoses[0];
 
 		// we won't need this
-		//clusters[i].clear();
 		delete poseClusters[i];
 	}
 
 	poseClusters.clear();
-
-	//clusters.clear();
-	//clusterVotes.clear();
 
 	return 0;
 }
@@ -686,7 +671,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	int numRefPoints = ppfModel->numRefPoints;
 	unsigned int n = numRefPoints;
 	PPFPose** poseList;
-	int sceneSamplingStep = 5, c = 0;
+	int sceneSamplingStep = 15, c = 0;
 
 	// compute bbox
 	float xRange[2], yRange[2], zRange[2];
@@ -705,9 +690,6 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
 	poseList = (PPFPose**)calloc((sampled.rows/sceneSamplingStep), sizeof(PPFPose*));
 
-	//vector<PPFPose*> poseList;
-	//poseList.clear();
-	
 	// obtain the tree representation for fast search
 	flannIndex  = (cvflann::Index<Distance_32F>*)index_pc_flann(sampled, data);
 
