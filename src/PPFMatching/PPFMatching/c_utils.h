@@ -153,6 +153,8 @@ extern "C" {
 		Pose[3]=t[0];
 		Pose[7]=t[1];
 		Pose[11]=t[2];
+
+		Pose[15] = 1;
 	}
 
 	
@@ -248,6 +250,7 @@ extern "C" {
 		row2[0] =  0.f;  row2[1] = cosA; row2[2] =  -sinA; 
 		row3[0] =  0.f;  row3[1] =  sinA; row3[2] = cosA; 
 
+		row1[3]=0; row2[3]=0; row3[3]=0;
 		T[3]=0; T[7]=0; T[11]=0; T[15] = 1;
 	}
 

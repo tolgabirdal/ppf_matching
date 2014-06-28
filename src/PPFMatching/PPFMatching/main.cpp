@@ -21,7 +21,7 @@
 
 using namespace cv;
 
-//#define USE_TOMMY_HASHTABLE
+#define USE_TOMMY_HASHTABLE
 
 #if defined( USE_TOMMY_HASHTABLE )
 #include <tommy.h>
@@ -395,7 +395,7 @@ double compute_alpha(const double p1[4], const double n1[4], const double p2[4])
 
 	if ( alpha != alpha)
     {
-		printf("NaN value!\n");
+		//printf("NaN value!\n");
 		return 0;
 	}
 
@@ -448,16 +448,20 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
 	// compute bbox
 	float xRange[2], yRange[2], zRange[2];
-	compute_obb(PC, xRange, yRange, zRange);
+	compute_bbox_std(PC, xRange, yRange, zRange);
 
 	// compute sampling step from diameter of bbox
 	float dx = xRange[1] - xRange[0];
 	float dy = yRange[1] - yRange[0];
 	float dz = zRange[1] - zRange[0];
 	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
+
+	//float diameter = compute_diameter(pc);
+
 	float distanceStep = diameter * sampling_step_relative;
 
 	Mat sampled = sample_pc_octree(PC, xRange, yRange, zRange, sampling_step_relative);
+	//visualize_pc(sampled, 1, 1, 0, "reg");
 
     double angleStepRadians = (360.0/angle_step_relative)*PI/180.0;
 
@@ -660,7 +664,7 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 	return 0;
 }
 
-void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, const TPPFModelPC* ppfModel, vector < PPFPose* >& results)
+void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, const float sampling_step_relative, const TPPFModelPC* ppfModel, vector < PPFPose* >& results)
 {
 	cvflann::Matrix<float> data;
 	int i;
@@ -678,16 +682,19 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 
 	// compute bbox
 	float xRange[2], yRange[2], zRange[2];
-	compute_obb(pc, xRange, yRange, zRange);
+	compute_bbox_std(pc, xRange, yRange, zRange);
+	//float diameter = compute_diameter(pc);
 	// sample the point cloud
-	float sampling_step_relative = (float)ppfModel->sampling_step_relative;
+	//float sampling_step_relative = (float)ppfModel->sampling_step_relative;
 	float dx = xRange[1] - xRange[0];
 	float dy = yRange[1] - yRange[0];
 	float dz = zRange[1] - zRange[0];
 	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
 	float distanceSampleStep = diameter * sampling_step_relative;
-	Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, distanceSampleStep);
+	Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, sampling_step_relative);
 	//Mat sampled = pc.clone();
+
+	//visualize_pc(sampled, 1, 1, 0, "reg");
 
 	// allocate the accumulator
 #if !defined (T_OPENMP)
@@ -755,8 +762,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 
 				if ( alpha_scene != alpha_scene)
 				{
-					printf("NaN value!\n");
-					//return ;
+					continue;
 				}
 
 				if (sin(alpha_scene)*p2t[2]<0.0)
@@ -853,8 +859,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 		// convert alpha_index to alpha
 		int alpha_index = alphaIndMax;
 		double alpha = (alpha_index*(4*PI))/numAngles-2*PI;
-		//alpha=-alpha;
-
+		
 		// Equation 2:
 		double Talpha[16]={0};
 		get_unit_x_rotation_44(alpha, Talpha);
@@ -878,8 +883,8 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	}
 
 	// TODO : Make the parameters relative if not arguments.
-	double RotationThreshold = (20.0 / 180.0 * M_PI);
-	double PositionThreshold = 0.05f;
+	double RotationThreshold = (30.0 / 180.0 * M_PI);
+	double PositionThreshold = 0.01f;
 	double MinMatchScore = 0.5;
 	
 	int numPosesAdded = sampled.rows/sceneSamplingStep;
@@ -901,35 +906,104 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 #endif
 }
 
+
+// real data
 int main()
 {
 	int useNormals = 1;
 	int withBbox = 1;
+	//int numVert = 12509;
+	//const char* fn = "../../../data/cheff_small.ply";
+	//int numVert = 184933;
 	int numVert = 6700;
-	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
+	const char* fn = "../../../data/parasaurolophus_6700.ply";
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 	//Mat pc = Mat(100,100,CV_32FC1);
 
 	TPPFModelPC* ppfModel = 0;
-	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
+	printf("Training...");
+	Mat PPFMAt = train_pc_ppf(pc, 0.03, 0.03, 30, &ppfModel);
+	printf("\nTraining complete. Loading model...");
+
+	numVert = 114373;
+	fn = "../../../data/rs1_normals.ply";
+	Mat pcTest = load_ply_simple(fn, numVert, useNormals);
+	printf("\nStarting matching...");
+
+	int64 tick1 = cv::getTickCount();
+	vector < PPFPose* > results;
+	t_match_pc_ppf(pcTest, 15, 5, 0.05, ppfModel, results);
+	int64 tick2 = cv::getTickCount();
+	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
+
+	printf("Estimated Poses (Ground Truth):\n");
+
+	// debug first five poses
+	for (int i=0; i<MIN(5, results.size()); i++)
+	{
+		PPFPose* pose = results[i];
+
+		// Print the pose
+		printf("Pose %d : Voted by %d, Alpha is %f\n", i, pose->numVotes, pose->alpha);
+		for (int j=0; j<4; j++)
+		{
+			for (int k=0; k<4; k++)
+			{
+				printf("%f ", pose->Pose[j*4+k]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+
+		// Visualize registration
+		Mat pct = transform_pc_pose(pc, pose->Pose);
+		visualize_registration(pcTest, pct, "Registration");
+	}
+
+	return 0;
+}
+
+//
+int main_synthetic()
+{
+	int useNormals = 1;
+	int withBbox = 1;
+	//int numVert = 6700;
+	//const char* fn = "../../../data/parasaurolophus_6700_2.ply";
+	int numVert = 34834;
+	const char* fn = "../../../data/Stanford/bunny/bun_zipper_ascii.ply";
+	Mat pc = load_ply_simple(fn, numVert, useNormals);
+	//Mat pc = Mat(100,100,CV_32FC1);
+
+	TPPFModelPC* ppfModel = 0;
+	printf("Training...");
+	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.03, 30, &ppfModel);
+	printf("\nTraining complete. Starting matching...\n");
 
 	// generate 10 poses and compare
 	for (int numTrials =0 ; numTrials <10; numTrials++)
 	{
 		// Make a sample pose:
 		double Pose[16]={0};
-		generate_random_pose(Pose, 1);
+		//generate_random_pose(Pose, 0.5);
+		get_random_pose(Pose);
 		printf("Random Pose (Ground Truth):\n");
 		matrix_print(Pose, 4,4);	
 
 		// add noise and transform
-		Mat pcPerturb = add_noise_pc(pc, 0.02);
-		Mat pcPerturbTrans = transform_pc_pose(pcPerturb, Pose );
+		Mat pcPerturb = add_noise_pc(pc, 0.000015);
+		//Mat pcPerturb = pc.clone();
+
+		// observe a partial object: Occlusion simulation
+		Mat pcPartial = pcPerturb.rowRange(pcPerturb.rows/3, pcPerturb.rows);
+
+		// transform with arbitrary pose
+		Mat pcPerturbTrans = transform_pc_pose(pcPartial, Pose );
 		//Mat pcPerturb = pc.clone();
 
 		int64 tick1 = cv::getTickCount();
 		vector < PPFPose* > results;
-		t_match_pc_ppf(pcPerturbTrans, 15, 5, ppfModel, results);
+		t_match_pc_ppf(pcPerturbTrans, 15, 5, 0.05, ppfModel, results);
 		int64 tick2 = cv::getTickCount();
 		printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
@@ -1011,7 +1085,7 @@ int main_octree_sampling()
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 
 	float xRange[2], yRange[2], zRange[2];
-	compute_obb(pc, xRange, yRange, zRange);
+	compute_bbox_std(pc, xRange, yRange, zRange);
 
 	Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, 0.05);
 
@@ -1115,7 +1189,7 @@ int main_bbox()
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 
 	float xRange[2], yRange[2], zRange[2];
-	compute_obb(pc, xRange, yRange, zRange);
+	compute_bbox_std(pc, xRange, yRange, zRange);
 
 	printf("Bounding box -- x: (%f, %f), y: (%f, %f), z: (%f, %f)\n", xRange[0], xRange[1], yRange[0], yRange[1], zRange[0], zRange[1]);
 

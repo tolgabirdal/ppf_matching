@@ -65,7 +65,7 @@ Mat load_ply_simple(const char* fileName, int numVertices, int withNormals)
 TOctreeNode* Mat2Octree(Mat pc)
 {
 	float xRange[2], yRange[2], zRange[2];
-	compute_obb(pc, xRange, yRange, zRange);
+	compute_bbox_std(pc, xRange, yRange, zRange);
 
 	float cx = (xRange[1] + xRange[0])*0.5f;
 	float cy = (yRange[1] + yRange[0])*0.5f;
@@ -147,13 +147,18 @@ Mat sample_pc_kd_tree(Mat pc, float radius, int numNeighbors)
 	return Mat();	
 }
 
-Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], float resolution)
+Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep)
 {
 	TOctreeNode *oc = Mat2Octree(pc);
 
-	float xstep = (xrange[1]-xrange[0]) * resolution;
-	float ystep = (yrange[1]-yrange[0]) * resolution;
-	float zstep = (zrange[1]-zrange[0]) * resolution;
+	// modified to sample within the cube
+
+	float xstep = (xrange[1]-xrange[0]) * sampleStep;
+	float ystep = (yrange[1]-yrange[0]) * sampleStep;
+	float zstep = (zrange[1]-zrange[0]) * sampleStep;
+	/*float xstep = sampleStep;
+	float ystep = sampleStep;
+	float zstep = sampleStep;*/
 
 	float pdx = xrange[0], pdy=yrange[0], pdz=zrange[0];
 	float dx=pdx+xstep, dy=pdy+ystep, dz=pdz+zstep;
@@ -315,8 +320,8 @@ Mat sample_pc_random(Mat PC, int numPoints)
 	return sampledPC;
 }
 
-// compute the oriented bounding box
-void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2])
+// compute the standard bounding box
+void compute_bbox_std(Mat pc, float xRange[2], float yRange[2], float zRange[2])
 {
 	Mat pcPts = pc.colRange(0, 3);
 	int num = pcPts.rows;
@@ -339,6 +344,65 @@ void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2])
 	yRange[1]=bbx.max_coord(1);
 	zRange[1]=bbx.max_coord(2);
 }
+
+// compute the oriented bounding box
+double compute_diameter(Mat pc)
+{
+	Mat pcPts = pc.colRange(0, 3);
+	int num = pcPts.rows;
+
+	float* points = (float*)pcPts.data;
+	gdiam_real  * gPoints;
+
+	gPoints = (gdiam_point)malloc( sizeof( gdiam_point_t ) * num );
+
+	// Initialize points in vector
+	for  ( int  ind = 0; ind < num; ind++ ) 
+	{
+		const float* row = (float*)(pcPts.data + (ind * pcPts.step));
+		gPoints[ ind * 3 + 0 ] = row[0];
+		gPoints[ ind * 3 + 1 ] = row[1];
+		gPoints[ ind * 3 + 2 ] = row[2];
+	}
+
+	GPointPair   pair;
+
+	pair = gdiam_approx_diam_pair( (gdiam_real *)points, num, 0.0 );
+
+	free(gPoints);
+	
+	return pair.distance;
+}
+/*
+void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2])
+{
+	Mat pcPts = pc.colRange(0, 3);
+	int num = pcPts.rows;
+
+	float* points = (float*)pcPts.data;
+	gdiam_real  * gPoints;
+
+	gPoints = (gdiam_point)malloc( sizeof( gdiam_point_t ) * num );
+
+	// Initialize points in vector
+	for  ( int  ind = 0; ind < num; ind++ ) 
+	{
+		const float* row = (float*)(pcPts.data + (ind * pcPts.step));
+		gPoints[ ind * 3 + 0 ] = row[0];
+		gPoints[ ind * 3 + 1 ] = row[1];
+		gPoints[ ind * 3 + 2 ] = row[2];
+	}
+
+	gdiam_point  * pnt_arr;
+    gdiam_bbox   bb;
+
+    pnt_arr = gdiam_convert( (gdiam_real *)points, num );
+    bb = gdiam_approx_mvbb_grid_sample( pnt_arr, num, 5, 400 );
+
+	free(pnt_arr);
+	free(gPoints);
+}*/
+
 
 
 Mat normalize_pc(Mat pc, float scale)
@@ -366,6 +430,61 @@ Mat normalize_pc(Mat pc, float scale)
 
 	cv::minMaxIdx(pcn, &minVal, &maxVal);
 	pcn=(float)scale*(pcn)/((float)maxVal-(float)minVal);
+	
+	return pcn;
+}
+
+Mat normalize_pc_coeff(Mat pc, float scale, float* Cx, float* Cy, float* Cz, float* MinVal, float* MaxVal)
+{
+	double minVal=0, maxVal=0;
+
+	Mat x,y,z, pcn;
+	pc.col(0).copyTo(x);
+	pc.col(1).copyTo(y);
+	pc.col(2).copyTo(z);
+
+	float cx = cv::mean(x).val[0];
+	float cy = cv::mean(y).val[0];
+	float cz = cv::mean(z).val[0];
+
+	cv::minMaxIdx(pc, &minVal, &maxVal);
+
+	x=x-cx;
+	y=y-cy;
+	z=z-cz;
+	pcn.create(pc.rows, 3, CV_32FC1);
+	x.copyTo(pcn.col(0));
+	y.copyTo(pcn.col(1));
+	z.copyTo(pcn.col(2));
+
+	cv::minMaxIdx(pcn, &minVal, &maxVal);
+	pcn=(float)scale*(pcn)/((float)maxVal-(float)minVal);
+
+	*MinVal=minVal;
+	*MaxVal=maxVal;
+	*Cx=cx;
+	*Cy=cy;
+	*Cz=cz;
+	
+	return pcn;
+}
+
+Mat trans_pc_coeff(Mat pc, float scale, float Cx, float Cy, float Cz, float MinVal, float MaxVal)
+{
+	Mat x,y,z, pcn;
+	pc.col(0).copyTo(x);
+	pc.col(1).copyTo(y);
+	pc.col(2).copyTo(z);
+
+	x=x-Cx;
+	y=y-Cy;
+	z=z-Cz;
+	pcn.create(pc.rows, 3, CV_32FC1);
+	x.copyTo(pcn.col(0));
+	y.copyTo(pcn.col(1));
+	z.copyTo(pcn.col(2));
+
+	pcn=(float)scale*(pcn)/((float)MaxVal-(float)MinVal);
 	
 	return pcn;
 }
@@ -423,6 +542,44 @@ Mat gen_random_mat(int rows, int cols, double mean, double stddev, int type)
 	return matr;
 }
 
+void get_rand_quat(double q[4])
+{
+	q[0] = (float)rand()/(float)(RAND_MAX);
+	q[1] = (float)rand()/(float)(RAND_MAX);
+	q[2] = (float)rand()/(float)(RAND_MAX);
+	q[3] = (float)rand()/(float)(RAND_MAX);
+
+	double n = sqrt(q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3]);
+	q[0]/=n;
+	q[1]/=n;
+	q[2]/=n;
+	q[3]/=n;
+
+	q[0]=fabs(q[0]);
+}
+
+void get_random_rotation(double R[9])
+{
+	double q[4];
+	get_rand_quat(q);
+	quaternion_to_matrix(q, R);
+}
+
+void get_random_pose(double Pose[16])
+{
+	double R[9], t[3];
+
+	srand(time(0));
+	get_random_rotation(R);
+
+	t[0] = (float)rand()/(float)(RAND_MAX);
+	t[1] = (float)rand()/(float)(RAND_MAX);
+	t[2] = (float)rand()/(float)(RAND_MAX);
+
+	rt_to_pose(R,t,Pose);
+}
+
+// this is not completely correct. Use get_random_pose instead
 void generate_random_pose(double Pose[16], double scale)
 {
 	Mat S, U, V, R;

@@ -112,7 +112,8 @@ int display(void* UserData)
 	float xRange[2], yRange[2], zRange[2];
 	if (withBbox || withOctree)
 	{
-		compute_obb(pcn, xRange, yRange, zRange);
+		//compute_obb(pcn, xRange, yRange, zRange);
+		compute_bbox_std(pcn, xRange, yRange, zRange);
 	}
 
 	if (withBbox)
@@ -215,13 +216,13 @@ int display_registration(void* UserData)
 	glRotatef(40,0,1,0);*/
 
 	// set lights
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+    glEnable(GL_LIGHTING);
+    //glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
     glEnable(GL_LIGHT0);
-    glEnable(GL_LIGHT1);
-    glEnable(GL_LIGHTING);
+    //glEnable(GL_LIGHT1);
     glMaterialfv(GL_FRONT, GL_AMBIENT, amb);
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, dif);
+    //glMaterialfv(GL_FRONT, GL_DIFFUSE, dif);
 
 	//glColor4f(1,1,1,1);
 	int glSize = 2;
@@ -230,7 +231,7 @@ int display_registration(void* UserData)
 
 	/*glDisable(GL_LIGHT0);
 	glDisable(GL_LIGHT1);*/
-	glDisable(GL_LIGHTING);
+	//glDisable(GL_LIGHTING);
 
 	glColor4f(1,0,0,1);
 
@@ -238,6 +239,7 @@ int display_registration(void* UserData)
 	for (int i=0; i!=pc.rows; i++)
 	{
 		float* data = (float*)(&pc.data[i*pc.step[0]]);
+		glNormal3f(data[3], data[4], data[5]);
 		glVertex3f(data[0], data[1], data[2]);
 	}
 	glEnd();
@@ -247,6 +249,7 @@ int display_registration(void* UserData)
 	for (int i=0; i!=pc2.rows; i++)
 	{
 		float* data = (float*)(&pc2.data[i*pc2.step[0]]);
+		glNormal3f(data[3], data[4], data[5]);
 		glVertex3f(data[0], data[1], data[2]);
 	}
 	glEnd();
@@ -308,8 +311,10 @@ void* visualize_registration(Mat pc1, Mat pc2, char* Title)
 
 	TWindowData* wd = new TWindowData();
 	
-	wd->PC = normalize_pc(pc1, 5);
-	wd->PC2 = normalize_pc(pc2, 5);
+	float cx=0, cy=0, cz=0, minv=0, maxv=0;
+	wd->PC = normalize_pc_coeff(pc1, 5, &cx, &cy, &cz, &minv, &maxv);
+	wd->PC2 = trans_pc_coeff(pc2, 5, cx, cy, cz, minv, maxv);
+	//wd->PC2 = normalize_pc(pc2, 5);
 
 	wd->window = window;
 	
