@@ -13,5 +13,7 @@ add_executable(main
 	helpers.cpp
 	t_octree.cpp
 	tommyhashtbl.c
+	gdiam.cpp
+	c_utils.cpp
 	)
 target_link_libraries(main ${OpenCV_LIBS})
