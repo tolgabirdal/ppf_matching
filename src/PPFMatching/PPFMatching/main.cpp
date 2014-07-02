@@ -34,7 +34,7 @@ using namespace cv;
 
 typedef struct THash {
 	int id;
-	int i, j, ppfInd;
+	int i, ppfInd;
 	#if defined( USE_TOMMY_HASHTABLE )
 	tommy_node node;
 	#endif
@@ -340,6 +340,7 @@ void compute_ppf_features(const double p1[4], const double n1[4],
 		f[2]+=M_PI;*/
 }
 
+
 // simple hashing
 int hash_ppf_simple(const double f[4], const double AngleStep, const double DistanceStep)
 {
@@ -460,7 +461,9 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
 	float distanceStep = diameter * sampling_step_relative;
 
-	Mat sampled = sample_pc_octree(PC, xRange, yRange, zRange, sampling_step_relative);
+	//Mat sampled = sample_pc_octree(PC, xRange, yRange, zRange, sampling_step_relative);
+	Mat sampled = sample_pc_by_quantization(PC, xRange, yRange, zRange, sampling_step_relative);
+	
 	//visualize_pc(sampled, 1, 1, 0, "reg");
 
     double angleStepRadians = (360.0/angle_step_relative)*PI/180.0;
@@ -512,11 +515,12 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 				hashNode->id = hashValue;
 				//hashNode->data = (void*)corrInd;
 				hashNode->i = i;
-				hashNode->j = j;
+				//hashNode->j = j;
 				hashNode->ppfInd = ppfInd;
 
 #if defined(USE_TOMMY_HASHTABLE)
-				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, (hashNode->id));
+				//tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, (hashValue));
+				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashValue));
 #else
 				hashtable_int_insert_hashed(hashTable, hashValue, (void*)hashNode);
 #endif
@@ -691,7 +695,8 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	float dz = zRange[1] - zRange[0];
 	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
 	float distanceSampleStep = diameter * sampling_step_relative;
-	Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, sampling_step_relative);
+	//Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, sampling_step_relative);
+	Mat sampled = sample_pc_by_quantization(pc, xRange, yRange, zRange, sampling_step_relative);
 	//Mat sampled = pc.clone();
 
 	//visualize_pc(sampled, 1, 1, 0, "reg");
@@ -772,7 +777,8 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 
 
 #if defined (USE_TOMMY_HASHTABLE)
-				tommy_hashtable_node* node = tommy_hashtable_bucket(ppfModel->hashTable, (hashValue));
+				//tommy_hashtable_node* node = tommy_hashtable_bucket(ppfModel->hashTable, (hashValue));
+				tommy_hashtable_node* node = tommy_hashtable_bucket(ppfModel->hashTable, tommy_inthash_u32(hashValue));
 #else
 				hashnode_i* node = hashtable_int_get_bucket_hashed(ppfModel->hashTable, (hashValue));
 #endif
@@ -883,8 +889,8 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	}
 
 	// TODO : Make the parameters relative if not arguments.
-	double RotationThreshold = (30.0 / 180.0 * M_PI);
-	double PositionThreshold = 0.01f;
+	double RotationThreshold = ((360/ppfModel->angleStep) / 180.0 * M_PI);
+	double PositionThreshold = ppfModel->sampling_step_relative;
 	double MinMatchScore = 0.5;
 	
 	int numPosesAdded = sampled.rows/sceneSamplingStep;
@@ -912,21 +918,39 @@ int main()
 {
 	int useNormals = 1;
 	int withBbox = 1;
-	//int numVert = 12509;
-	//const char* fn = "../../../data/cheff_small.ply";
-	//int numVert = 184933;
-	int numVert = 6700;
-	const char* fn = "../../../data/parasaurolophus_6700.ply";
+	int numVert = 16399;
+	const char* fn = "../../../data/cheff_simple.ply";
+	//int numVert = 135142;
+	//const char* fn = "../../../data/chicken_high.ply";
+	//int numVert = 28291;
+	//const char* fn = "../../../data/parasaurolophus_low_normals2.ply";
+	//int numVert = 6700;
+	//const char* fn = "../../../data/parasaurolophus_6700.ply";
+	//int numVert = 51954;
+	//const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
+	//int numVert = 33368;
+	//const char* fn = "../../../data/chicken2.ply";
+	//int numVert = 13550;
+	//const char* fn = "../../../data/chicken3.ply";
+	
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 	//Mat pc = Mat(100,100,CV_32FC1);
 
 	TPPFModelPC* ppfModel = 0;
 	printf("Training...");
-	Mat PPFMAt = train_pc_ppf(pc, 0.03, 0.03, 30, &ppfModel);
+	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
 	printf("\nTraining complete. Loading model...");
 
-	numVert = 114373;
-	fn = "../../../data/rs1_normals.ply";
+	//numVert = 122503;
+	//fn = "../../../data/SpaceTime/Scena1/scene1-scene4_0_ascii.ply";
+	//numVert = 113732;
+	//fn = "../../../data/Retrieval/rs22_proc2.ply";
+	//numVert = 114373;
+	//fn = "../../../data/rs1_normals.ply";
+	numVert = 135985;
+	fn = "../../../data/Retrieval/rs8_proc.ply";
+	//numVert = 12345;
+	//fn = "../../../data/rs1_normals2.ply";
 	Mat pcTest = load_ply_simple(fn, numVert, useNormals);
 	printf("\nStarting matching...");
 
@@ -936,7 +960,7 @@ int main()
 	int64 tick2 = cv::getTickCount();
 	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
-	printf("Estimated Poses (Ground Truth):\n");
+	printf("Estimated Poses:\n");
 
 	// debug first five poses
 	for (int i=0; i<MIN(5, results.size()); i++)
@@ -1073,6 +1097,45 @@ int main_rt()
 	return 0;
 }
 
+
+// test different point cloud sampling
+// _sampling
+int main_sampling()
+{
+	int useNormals = 1;
+	int withBbox = 1;
+	int withOctree = 0;
+	int numVert = 6700;
+	const char* fn = "../../../data/parasaurolophus_6700_2.ply";
+	Mat pc = load_ply_simple(fn, numVert, useNormals);
+
+	float xRange[2], yRange[2], zRange[2];
+	compute_bbox_std(pc, xRange, yRange, zRange);
+
+	float dx = xRange[1] - xRange[0];
+	float dy = yRange[1] - yRange[0];
+	float dz = zRange[1] - zRange[0];
+	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
+
+	omp_set_num_threads(8);
+
+	int64 t1 = cv::getTickCount();
+	Mat sampled2 = sample_pc_octree(pc, xRange, yRange, zRange, 0.01);
+	int64 t2 = cv::getTickCount();
+	printf("Elapsed : %f\n", (t2-t1)/cv::getTickFrequency());
+
+	t1 = cv::getTickCount();
+	Mat sampled = sample_pc_by_quantization(pc, xRange, yRange, zRange, 0.01);
+	t2 = cv::getTickCount();
+	printf("Elapsed : %f\n", (t2-t1)/cv::getTickFrequency());
+	//Mat sampled = sample_pc_kd_tree(pc, diameter*0.025, 15);
+
+#ifdef _MSC_VER
+	visualize_pc(sampled, 0, 1, 0, "Point Cloud");
+#endif
+
+	return 0;
+}
 
 // test octree point cloud sampling
 int main_octree_sampling()

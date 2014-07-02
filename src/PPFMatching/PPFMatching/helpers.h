@@ -20,6 +20,8 @@ extern "C" {
 	Mat sample_pc_perfect_uniform(Mat PC, int sampleStep);
 	Mat sample_pc_random(Mat PC, int numPoints);
 	Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], float resolution);
+	Mat sample_pc_by_quantization(Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep);
+	Mat sample_pc_kd_tree(Mat pc, float radius, int numNeighbors);
 
 	void compute_bbox_std(Mat pc, float xRange[2], float yRange[2], float zRange[2]);
 	double compute_diameter(Mat pc);

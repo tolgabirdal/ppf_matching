@@ -231,7 +231,7 @@ int display_registration(void* UserData)
 
 	/*glDisable(GL_LIGHT0);
 	glDisable(GL_LIGHT1);*/
-	//glDisable(GL_LIGHTING);
+	glDisable(GL_LIGHTING);
 
 	glColor4f(1,0,0,1);
 

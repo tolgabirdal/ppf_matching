@@ -118,14 +118,14 @@ Mat sample_pc_perfect_uniform(Mat PC, int sampleStep)
 	return Mat();
 }
 
-
 void* index_pc_flann(Mat pc, cvflann::Matrix<float>& data)
 {	
-	cvflann::AutotunedIndexParams params;
+	cvflann::LinearIndexParams params;
 	
-	data = cvflann::Matrix<float>( (float*)pc.data, pc.rows, pc.cols );
+	data = cvflann::Matrix<float>( (float*)pc.data, pc.rows, 3, pc.step/sizeof(float));
 	
 	cvflann::Index < Distance_32F>* flannIndex = new cvflann::Index< Distance_32F >(data, params);
+	flannIndex->buildIndex();
 
 	return (void*)flannIndex;
 }	
@@ -133,20 +133,192 @@ void* index_pc_flann(Mat pc, cvflann::Matrix<float>& data)
 // not yet complete
 Mat sample_pc_kd_tree(Mat pc, float radius, int numNeighbors)
 {
-	cvflann::AutotunedIndexParams params;
+	cvflann::LinearIndexParams params;
 	cvflann::SearchParams searchParams;
+	//cvflann::IndexParams indexParams;
 	cvflann::Matrix<float> data;
 	cvflann::Index < Distance_32F>* flannIndex = (cvflann::Index < Distance_32F>*)index_pc_flann(pc, data);
-	
-	cv::Mat1i ind(pc.rows, numNeighbors);
-	cvflann::Matrix<int> indices((int*) ind.data, ind.rows, ind.cols);
-	cvflann::Matrix<float> dists(new float[pc.rows*numNeighbors], pc.rows, numNeighbors);
 
-	flannIndex->radiusSearch(data, indices, dists, radius, searchParams);
+	int interpNormals = (pc.cols==6);
+
+	int* index = new int[numNeighbors];
+	float* dist = new float[numNeighbors];
+	
+
+	for (int i=0; i<pc.rows; i++)
+	{
+		float* pcRow = (float*)(&pc.data[i*pc.step]);
+		
+		cvflann::Matrix<float> queryPt(pcRow, 1, 3);
+		cvflann::Matrix<int> indexPt(index, 1,numNeighbors );
+		cvflann::Matrix<float> distPt(dist, 1,numNeighbors );
+ 		flannIndex->radiusSearch(queryPt, indexPt, distPt, radius, searchParams);
+
+		//int* rowInd = indices[i*indices.stride];
+		//for (int j=0; j<indices.cols; j++)
+		{
+
+
+			/*if (!interpNormals)
+			{
+				int numPts = numNeighbors;
+				// average the points
+				for (j=0; j<numPts; j++)
+				{
+					float* pcRow = (float*)(&pc.data[rowInd[j]*pc.step]);
+					
+					px += (double)pcRow[0];
+					py += (double)pcRow[1];
+					pz += (double)pcRow[2];
+				}
+
+				px/=(double)numPts;
+				py/=(double)numPts;
+				pz/=(double)numPts;
+
+				pcData[0]=(float)px;
+				pcData[1]=(float)py;
+				pcData[2]=(float)pz;
+			}
+			else
+			{
+				for (j=0; j<results.size(); j++)
+				{
+					px += (double)results[j][0];
+					py += (double)results[j][1];
+					pz += (double)results[j][2];
+					nx += (double)results[j][3];
+					ny += (double)results[j][4];
+					nz += (double)results[j][5];
+				}
+
+				px/=(double)results.size();
+				py/=(double)results.size();
+				pz/=(double)results.size();
+				nx/=(double)results.size();
+				ny/=(double)results.size();
+				nz/=(double)results.size();
+
+				pcData[0]=(float)px;
+				pcData[1]=(float)py;
+				pcData[2]=(float)pz;
+
+				// normalize the normals
+				double norm = sqrt(nx*nx+ny*ny+nz*nz);
+
+				if (norm>EPS)
+				{
+					pcData[3]=(float)(nx/norm);
+					pcData[4]=(float)(ny/norm);
+					pcData[5]=(float)(nz/norm);
+				}
+			}*/
+		}
+	}
 
 	return Mat();	
 }
 
+// uses a volume instead of an octree
+// TODO: Right now normals are required. 
+// This is much faster than sample_pc_octree
+Mat sample_pc_by_quantization(Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep)
+{
+	vector < vector<int> > map;
+
+	int numSamplesDim = (int)(1.0/sampleStep);
+
+	float xr = xrange[1] - xrange[0];
+	float yr = yrange[1] - yrange[0];
+	float zr = zrange[1] - zrange[0];
+
+	int numPoints = 0;
+
+	map.resize((numSamplesDim+1)*(numSamplesDim+1)*(numSamplesDim+1));
+
+//#pragma omp parallel for
+	for (int i=0; i<pc.rows; i++)
+	{
+		const float* point = (float*)(&pc.data[i * pc.step]);
+
+		// quantize a point
+		const int xCell =(int) ((float)numSamplesDim*(point[0]-xrange[0])/xr);
+		const int yCell =(int) ((float)numSamplesDim*(point[1]-yrange[0])/yr);
+		const int zCell =(int) ((float)numSamplesDim*(point[2]-zrange[0])/zr);
+		const int index = xCell*numSamplesDim*numSamplesDim+yCell*numSamplesDim+zCell;
+
+/*#pragma omp critical 
+		{*/
+			map[index].push_back(i);
+//		}
+	}
+
+	for (int i=0; i<map.size(); i++)
+	{
+		numPoints += (map[i].size()>0);
+	}
+
+	Mat pcSampled = Mat(numPoints, pc.cols, CV_32F);
+	int c = 0;
+
+//#pragma omp parallel for
+	for (int i=0; i<map.size(); i++)
+	{
+		double px=0, py=0, pz=0;
+		double nx=0, ny=0, nz=0;
+
+		vector<int> curCell = map[i];
+		const int cn = curCell.size();
+		if (cn>0)
+		{
+			for (int j=0; j<cn; j++)
+			{
+				const int ptInd = curCell[j];
+				float* point = (float*)(&pc.data[ptInd * pc.step]);
+
+				px += (double)point[0];
+				py += (double)point[1];
+				pz += (double)point[2];
+				nx += (double)point[3];
+				ny += (double)point[4];
+				nz += (double)point[5];
+			}						
+
+			px/=(double)cn;
+			py/=(double)cn;
+			pz/=(double)cn;
+			nx/=(double)cn;
+			ny/=(double)cn;
+			nz/=(double)cn;
+
+			float *pcData = (float*)(&pcSampled.data[c*pcSampled.step[0]]);
+			pcData[0]=(float)px;
+			pcData[1]=(float)py;
+			pcData[2]=(float)pz;
+
+			// normalize the normals
+			double norm = sqrt(nx*nx+ny*ny+nz*nz);
+
+			if (norm>EPS)
+			{
+				pcData[3]=(float)(nx/norm);
+				pcData[4]=(float)(ny/norm);
+				pcData[5]=(float)(nz/norm);
+			}
+//#pragma omp atomic
+			c++;
+
+			curCell.clear();
+		}
+	}
+
+	map.clear();
+	return pcSampled;
+}
+
+// TODO : This uses a recursive octree. The recursion can sometimes get really deep 
+// (if the points are too many). Instead I might use KD-Tree sampling but still
+// we could find a more efficient way to do this.
 Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep)
 {
 	TOctreeNode *oc = Mat2Octree(pc);
