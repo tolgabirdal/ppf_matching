@@ -1,3 +1,7 @@
+% by Tolga Birdal
+% Implementation of Kok Kim Low's ICP registration
+% based on the linearization of the rotations.
+
 function [Pose]=icp_p_pl(SrcPC, DstPC, DstN)
 
 TolP=0.025;
@@ -12,9 +16,6 @@ meanDst = mean(DstPC);
 DstPC = bsxfun(@minus, DstPC, meanDst);
 
 trel = meanDst-meanSrc;
-
-
-
 
 % Set initial rigid parameters
 % 3 angles, 3 translations
@@ -79,6 +80,8 @@ while( (~(fval_perc<(1+TolP) && fval_perc>(1-TolP))) && i<Iterations)
 end
 
 Pose = minPose;
+
+Pose(1:3, 4) = Pose(1:3, 4)+trel;
 
 end
 
