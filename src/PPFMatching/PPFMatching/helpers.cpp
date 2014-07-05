@@ -32,7 +32,7 @@ Mat load_ply_simple(const char* fileName, int numVertices, int withNormals)
 	}
 
 	string str;
-	while (str!="end_header")
+	while (str.substr(0, 10) !="end_header")
 		getline(ifs, str);
 
 	float dummy =  0;
