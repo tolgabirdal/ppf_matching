@@ -9,7 +9,7 @@ normals = compute_normal(vertices, faces);
 SrcN = normals';
 
 % Perform stable sampling
-[SrcSample]=sample_pc_stable(SrcPC, SrcN, 1200);
+[SrcSample, SrcSampleNormals]=sample_pc_stable(SrcPC, SrcN, 1200);
 
 figure, 
 subplot(1,2,1);

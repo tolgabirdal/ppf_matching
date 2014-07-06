@@ -785,3 +785,4 @@ Mat add_noise_pc(Mat pc, double scale)
 	Mat randT = gen_random_mat(pc.rows,pc.cols,0,scale,CV_32FC1);
 	return randT + pc;
 }
+

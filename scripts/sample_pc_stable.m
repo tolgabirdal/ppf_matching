@@ -10,7 +10,7 @@
 % of the covariance matrix of the torque and force.
 % The details and relation to the paper are given in the comments
 
-function [SrcSample]=sample_pc_stable(Src, NormalsSrc, numPoints)
+function [SrcSample, SrcSampleNormals]=sample_pc_stable(Src, NormalsSrc, numPoints)
 
 n = length(Src);
 
@@ -101,6 +101,7 @@ end
 % Really sample them.
 sampledIndices=sampledIndices(1:numPoints);
 SrcSample = Src(sampledIndices, :);
+SrcSampleNormals = NormalsSrc(sampledIndices, :);
 
 end
 
