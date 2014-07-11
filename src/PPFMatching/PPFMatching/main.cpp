@@ -18,6 +18,7 @@
 #include "visualize_win.h"
 #include "c_utils.h"
 #include "hash_murmur.h"
+#include "THashInt.h"
 
 using namespace cv;
 
@@ -26,10 +27,9 @@ using namespace cv;
 #if defined( USE_TOMMY_HASHTABLE )
 #include <tommy.h>
 #endif
-#include "THashInt.h"
 
 #if defined (T_OPENMP)
-#include<omp.h>
+#include <omp.h>
 #endif
 
 typedef struct THash {
@@ -109,7 +109,7 @@ public:
 
 	void update_pose_quat(double Q[4], double NewT[3])
 	{
-		TDouble NewR[9];
+		double NewR[9];
 
 		quaternion_to_matrix(Q, NewR);
 		q[0]=Q[0]; q[1]=Q[1]; q[2]=Q[2]; q[3]=Q[3]; 
@@ -981,7 +981,9 @@ int main()
 
 		// Visualize registration
 		Mat pct = transform_pc_pose(pc, pose->Pose);
+#ifdef _MSC_VER
 		visualize_registration(pcTest, pct, "Registration");
+#endif
 	}
 
 	return 0;
@@ -1052,7 +1054,9 @@ int main_synthetic()
 
 			// Visualize registration
 			Mat pct = transform_pc_pose(pc, pose->Pose);
+#ifdef _MSC_VER
 			visualize_registration(pcPerturbTrans, pct, "Registration");
+#endif
 		}
 
 	}
@@ -1117,7 +1121,9 @@ int main_sampling()
 	float dz = zRange[1] - zRange[0];
 	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
 
+#if !defined (T_OPENMP)
 	omp_set_num_threads(8);
+#endif
 
 	int64 t1 = cv::getTickCount();
 	Mat sampled2 = sample_pc_octree(pc, xRange, yRange, zRange, 0.01);
