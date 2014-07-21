@@ -5,14 +5,12 @@
 #include "opencv2/core/core.hpp"
 #include "t_octree.h"
 
-using namespace cv;
-
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
-	void* visualize_pc(Mat cloud, int withNormals, int withBbox, int withOctree, char* Title);
-	void* visualize_registration(Mat pc1, Mat pc2, char* Title);
+	void* visualize_pc(cv::Mat cloud, int withNormals, int withBbox, int withOctree, char* Title);
+	void* visualize_registration(cv::Mat pc1, cv::Mat pc2, char* Title);
 
 #if defined (__cplusplus)
 }

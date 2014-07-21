@@ -3,41 +3,47 @@
 #define __HELPERS_H_
 
 #include <opencv2/core/core.hpp>
-#include <opencv2/flann/flann.hpp>
+//#include <opencv2/flann/flann.hpp>
 #include "t_octree.h"
 
-using namespace cv;
+//using namespace cv;
 
-typedef cvflann::L2<float> Distance_32F;
+//typedef cvflann::L2<float> Distance_32F;
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
-	Mat load_ply_simple(const char* fileName, int numVertices, int withNormals);
+	cv::Mat load_ply_simple(const char* fileName, int numVertices, int withNormals);
+	void write_ply(cv::Mat PC, const char* FileName);
 	
-	Mat sample_pc_uniform(Mat PC, int sampleStep);
-	Mat sample_pc_perfect_uniform(Mat PC, int sampleStep);
-	Mat sample_pc_random(Mat PC, int numPoints);
-	Mat sample_pc_octree(Mat pc, float xrange[2], float yrange[2], float zrange[2], float resolution);
-	Mat sample_pc_by_quantization(Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep);
-	Mat sample_pc_kd_tree(Mat pc, float radius, int numNeighbors);
+	cv::Mat sample_pc_uniform(cv::Mat PC, int sampleStep);
+	cv::Mat sample_pc_uniform_ind(cv::Mat PC, int sampleStep, std::vector<int>& indices);
+	cv::Mat sample_pc_perfect_uniform(cv::Mat PC, int sampleStep);
+	cv::Mat sample_pc_random(cv::Mat PC, int numPoints);
+	cv::Mat sample_pc_octree(cv::Mat pc, float xrange[2], float yrange[2], float zrange[2], float resolution);
+	cv::Mat sample_pc_by_quantization(cv::Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep);
+	cv::Mat sample_pc_kd_tree(cv::Mat pc, float radius, int numNeighbors);
 
-	void compute_bbox_std(Mat pc, float xRange[2], float yRange[2], float zRange[2]);
-	double compute_diameter(Mat pc);
-	//void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2]);
+	void compute_bbox_std(cv::Mat pc, float xRange[2], float yRange[2], float zRange[2]);
+	double compute_diameter(cv::Mat pc);
+	//void compute_obb(cv::Mat pc, float xRange[2], float yRange[2], float zRange[2]);
 	
-	TOctreeNode* Mat2Octree(Mat pc);
-	void* index_pc_flann(Mat pc, cvflann::Matrix<float>& data);
+	TOctreeNode* Mat2Octree(cv::Mat pc);
+	void* index_pc_flann(cv::Mat pc);
+	void destroy_flann(void* flannIndex);
+	void query_pc_flann(void* flannIndex, cv::Mat PC, cv::Mat& Indices, cv::Mat& Distances);
 	
-	Mat normalize_pc(Mat pc, float scale);
-	Mat normalize_pc_coeff(Mat pc, float scale, float* Cx, float* Cy, float* Cz, float* MinVal, float* MaxVal);
-	Mat trans_pc_coeff(Mat pc, float scale, float Cx, float Cy, float Cz, float MinVal, float MaxVal);
-	Mat transform_pc_pose(Mat pc, double Pose[16]);
+	cv::Mat normalize_pc(cv::Mat pc, float scale);
+	cv::Mat normalize_pc_coeff(cv::Mat pc, float scale, float* Cx, float* Cy, float* Cz, float* MinVal, float* MaxVal);
+	cv::Mat trans_pc_coeff(cv::Mat pc, float scale, float Cx, float Cy, float Cz, float MinVal, float MaxVal);
+	cv::Mat transform_pc_pose(cv::Mat pc, double Pose[16]);
 
 	void get_random_pose(double Pose[16]);
 	void generate_random_pose(double Pose[16], double scale);
-	Mat add_noise_pc(Mat pc, double scale);
+	cv::Mat add_noise_pc(cv::Mat pc, double scale);
+
+	int compute_normals_pc_3d(const cv::Mat PC, cv::Mat& PCNormals, const int NumNeighbors, const bool FlipViewpoint, const double viewpoint[3]);
 
 
 #if defined (__cplusplus)

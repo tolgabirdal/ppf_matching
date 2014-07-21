@@ -77,7 +77,7 @@ void hashtable_int_destroy(hashtable_int *hashtbl)
 }
 
 
-unsigned int hashtable_int_insert(hashtable_int *hashtbl, unsigned int key, void *data)
+unsigned int hashtable_int_insert(hashtable_int *hashtbl, KeyType key, void *data)
 {
 	struct hashnode_i *node;
 	size_t hash=hashtbl->hashfunc(key)%hashtbl->size;
@@ -106,7 +106,7 @@ unsigned int hashtable_int_insert(hashtable_int *hashtbl, unsigned int key, void
 	return 0;
 }
 
-unsigned int hashtable_int_insert_hashed(hashtable_int *hashtbl, unsigned int key, void *data)
+unsigned int hashtable_int_insert_hashed(hashtable_int *hashtbl, KeyType key, void *data)
 {
 	struct hashnode_i *node;
 	size_t hash = key % hashtbl->size;
@@ -136,7 +136,7 @@ unsigned int hashtable_int_insert_hashed(hashtable_int *hashtbl, unsigned int ke
 }
 
 
-unsigned int hashtable_int_remove(hashtable_int *hashtbl, unsigned int key)
+unsigned int hashtable_int_remove(hashtable_int *hashtbl, KeyType key)
 {
 	struct hashnode_i *node, *prevnode=NULL;
 	size_t hash=hashtbl->hashfunc(key)%hashtbl->size;
@@ -157,7 +157,7 @@ unsigned int hashtable_int_remove(hashtable_int *hashtbl, unsigned int key)
 }
 
 
-void *hashtable_int_get(hashtable_int *hashtbl, unsigned int key)
+void *hashtable_int_get(hashtable_int *hashtbl, KeyType key)
 {
 	struct hashnode_i *node;
 	size_t hash=hashtbl->hashfunc(key)%hashtbl->size;
@@ -173,7 +173,7 @@ void *hashtable_int_get(hashtable_int *hashtbl, unsigned int key)
 	return NULL;
 }
 
-hashnode_i* hashtable_int_get_bucket_hashed(hashtable_int *hashtbl, unsigned int key)
+hashnode_i* hashtable_int_get_bucket_hashed(hashtable_int *hashtbl, KeyType key)
 {
 	struct hashnode_i *node;
 	size_t hash = key % hashtbl->size;
@@ -235,7 +235,7 @@ int hashtable_int_write(const hashtable_int * hashtbl, const size_t dataSize, FI
 		node=hashtbl->nodes[i];
 		while(node) 
 		{
-			fwrite(node->key, sizeof(int), 1, f);
+			fwrite(node->key, sizeof(KeyType), 1, f);
 			fwrite(&node->data, dataSize, 1, f);
 			node=node->next;
 		}
@@ -286,7 +286,7 @@ hashtable_int *hashtable_int_read(FILE* f)
 			{
 				int key=0;
 				void* data=0;
-				fread(&key, sizeof(int), 1, f);
+				fread(&key, sizeof(KeyType), 1, f);
 
 				if (dataSize>sizeof(void*))
 				{

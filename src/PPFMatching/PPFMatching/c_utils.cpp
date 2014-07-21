@@ -2,17 +2,6 @@
 #include "c_utils.h"
 #include <stdio.h>
 
-void matrix_ident(int n, double *A) 
-{
-	int i;
-
-	for (i = 0; i < n*n; i++)	
-		A[i]=0;
-
-	for (i = 0; i < n; i++) 
-		A[i * n + i] = 1.0;
-}
-
 void matrix_sum(int Am, int An, int Bm, int Bn, double *A,  double *B, double *R) 
 {
 	int r = Am;

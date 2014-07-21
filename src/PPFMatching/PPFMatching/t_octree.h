@@ -3,7 +3,7 @@
 #define _T_OCTREE_H_
 
 #include <vector>
-using namespace std;
+//using namespace std;
 
 typedef struct TOctreeNode
 {

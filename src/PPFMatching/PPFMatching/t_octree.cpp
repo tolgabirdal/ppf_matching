@@ -1,6 +1,8 @@
 #include "t_octree.h"
 #include <cstdlib>
 
+using namespace std;
+
 int t_octree_insert(TOctreeNode* octree, float* data)
 {
 	int octNew = -1;

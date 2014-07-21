@@ -7,7 +7,7 @@
 
 #define EPS		1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
 
-#define T_OPENMP // define this if OpenMP is desired
+//#define T_OPENMP // define this if OpenMP is desired
 
 #ifndef PI
 #ifdef  M_PI
@@ -44,6 +44,10 @@ v[2]/=normTemp;\
 	f = (atan2(TNorm3(c), TDot3(a, b)));\
 }
 
+__inline int round(double number)
+{
+    return (number >= 0) ? (int)(number + 0.5) : (int)(number - 0.5);
+}
 
 #if defined (__cplusplus)
 extern "C" {
@@ -136,6 +140,18 @@ extern "C" {
 				printf(" %0.6f ", A[i * n + j]);
 			}
 			printf("\n");
+		}
+	}
+
+	static __inline void matrix_ident(int n, double *A) {
+		int i, j;
+
+		for (i = 0; i < n*n; i++) {
+			A[i] = 0.0;
+		}
+
+		for (i = 0; i < n; i++) {
+			A[i * n + i] = 1.0;
 		}
 	}
 

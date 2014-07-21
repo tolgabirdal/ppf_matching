@@ -1,8 +1,10 @@
 
 #include "WindowGL.h"
-#include "gl_utils.h"
 #include "visualize_win.h"
 #include "helpers.h"
+#include "gl_utils.h"
+
+using namespace cv;
 
 typedef struct
 {

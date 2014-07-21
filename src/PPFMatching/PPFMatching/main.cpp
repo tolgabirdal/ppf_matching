@@ -1,27 +1,22 @@
-/*#include "opencv2/features2d.hpp"
-#include "opencv2/nonfree.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"*/
-#include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
-//#include <opencv2/rgbd/rgbd.hpp>
-#include <opencv2/flann/flann.hpp>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
 
-#include "helpers.h"
 #include "visualize_win.h"
+#include <opencv2/core/utility.hpp>
+#include "helpers.h"
 #include "c_utils.h"
 #include "hash_murmur.h"
+#include "fasthash.h"
+#include "t_icp.h"
 
+
+using namespace std;
 using namespace cv;
 
-#define USE_TOMMY_HASHTABLE
+//#define USE_TOMMY_HASHTABLE
 
 #if defined( USE_TOMMY_HASHTABLE )
 #include <tommy.h>
@@ -109,7 +104,7 @@ public:
 
 	void update_pose_quat(double Q[4], double NewT[3])
 	{
-		TDouble NewR[9];
+		double NewR[9];
 
 		quaternion_to_matrix(Q, NewR);
 		q[0]=Q[0]; q[1]=Q[1]; q[2]=Q[2]; q[3]=Q[3]; 
@@ -270,7 +265,7 @@ public:
 	double maxDist, angleStep, distStep;
 	double sampling_step_relative;
 	Mat inputPC, sampledPC, PPF;
-	cvflann::Index<Distance_32F>* flannIndex;
+	//cvflann::Index<Distance_32F>* flannIndex;
 	int n, numRefPoints, sampledStep, ppfStep;
 #if defined (USE_TOMMY_HASHTABLE)
 	tommy_hashtable* hashTable;
@@ -344,14 +339,17 @@ void compute_ppf_features(const double p1[4], const double n1[4],
 // simple hashing
 int hash_ppf_simple(const double f[4], const double AngleStep, const double DistanceStep)
 {
-	const int d1 = (int) (floor ((double)f[0] / (double)AngleStep));
-	const int d2 = (int) (floor ((double)f[1] / (double)AngleStep));
-	const int d3 = (int) (floor ((double)f[2] / (double)AngleStep));
-	const int d4 = (int) (floor ((double)f[3] / (double)DistanceStep));
+	const unsigned char d1 = (unsigned char) (floor ((double)f[0] / (double)AngleStep));
+	const unsigned char d2 = (unsigned char) (floor ((double)f[1] / (double)AngleStep));
+	const unsigned char d3 = (unsigned char) (floor ((double)f[2] / (double)AngleStep));
+	const unsigned char d4 = (unsigned char) (floor ((double)f[3] / (double)DistanceStep));
 
 	//printf("%d, %d, %d,%d\n",d1,d2,d3,d4);
 	
-	return (d1 | (d2<<8) | (d3<<16) | (d4<<24));
+	//return (d1 | (d2<<8) | (d3<<16) | (d4<<24));
+    int hashKey = (d1 | (d2<<8) | (d3<<16) | (d4<<24));
+	hashKey = fasthash32(&hashKey, sizeof(int), 0xAF841C);
+	return hashKey;
 }
 
 // quantize ppf and hash it for proper indexing
@@ -363,7 +361,9 @@ int hash_ppf(const double f[4], const double AngleStep, const double DistanceSte
 	const int d4 = (int) (floor ((double)f[3] / (double)DistanceStep));
 	int key[4]={d1,d2,d3,d4};
 	int hashKey=0;
-	MurmurHash3_x86_32(key, 4*sizeof(int), 42, &hashKey);
+	//MurmurHash3_x86_32(key, 4*sizeof(int), 42, &hashKey);
+    hashKey = fasthash32(key, 4*sizeof(int), 0xAF841C);
+	
 	return hashKey;
 }
 
@@ -670,11 +670,11 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 
 void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, const float sampling_step_relative, const TPPFModelPC* ppfModel, vector < PPFPose* >& results)
 {
-	cvflann::Matrix<float> data;
+	//cvflann::Matrix<float> data;
 	int i;
 	int numNeighbors = 1000;
 	int numAngles = (int) (floor (2 * M_PI / ppfModel->angleStep));
-	cvflann::Index<Distance_32F>* flannIndex;
+	//cvflann::Index<Distance_32F>* flannIndex;
 	float angleStepRadians = ppfModel->angleStep;
 	float distanceStep = ppfModel->distStep;
 	int sampledStep = ppfModel->sampledStep;
@@ -912,20 +912,43 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 #endif
 }
 
-
-// real data
+// test icp
 int main()
 {
 	int useNormals = 1;
 	int withBbox = 1;
-	int numVert = 16399;
-	const char* fn = "../../../data/cheff_simple.ply";
+	
+	// model
+	int numVert = 6700;
+	const char* fn = "../../../data/parasaurolophus_6700.ply";
+	Mat model = load_ply_simple(fn, numVert, useNormals);
+
+	// scene
+	numVert = 114373;
+	fn = "../../../data/rs1_normals.ply";
+	Mat scene = load_ply_simple(fn, numVert, useNormals);
+
+	double Pose[16]={0.997621, 0.066989, -0.016266, -121.255793, -0.047424, 0.495682, -0.867208, -610.319320, -0.050030, 0.865917, 0.497680, -324.868454, 0.000000, 0.000000, 0.000000, 1.000000};
+	Mat modelT = transform_pc_pose(model, Pose);
+
+	float Residual=0;
+	t_icp_register(modelT, scene, 0.0125, 150, 3, 1, 8, 0, 0, &Residual, Pose); 
+
+}
+
+// real data
+int main_real_data()
+{
+	int useNormals = 1;
+	int withBbox = 1;
+	//int numVert = 16399;
+	//const char* fn = "../../../data/cheff_simple.ply";
 	//int numVert = 135142;
 	//const char* fn = "../../../data/chicken_high.ply";
 	//int numVert = 28291;
 	//const char* fn = "../../../data/parasaurolophus_low_normals2.ply";
-	//int numVert = 6700;
-	//const char* fn = "../../../data/parasaurolophus_6700.ply";
+	int numVert = 6700;
+	const char* fn = "../../../data/parasaurolophus_6700.ply";
 	//int numVert = 51954;
 	//const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
 	//int numVert = 33368;
@@ -938,17 +961,17 @@ int main()
 
 	TPPFModelPC* ppfModel = 0;
 	printf("Training...");
-	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
+	Mat PPFMAt = train_pc_ppf(pc, 0.025, 0.025, 30, &ppfModel);
 	printf("\nTraining complete. Loading model...");
 
 	//numVert = 122503;
 	//fn = "../../../data/SpaceTime/Scena1/scene1-scene4_0_ascii.ply";
 	//numVert = 113732;
-	//fn = "../../../data/Retrieval/rs22_proc2.ply";
-	//numVert = 114373;
-	//fn = "../../../data/rs1_normals.ply";
-	numVert = 135985;
-	fn = "../../../data/Retrieval/rs8_proc.ply";
+	////fn = "../../../data/Retrieval/rs22_proc2.ply";
+	numVert = 114373;
+	fn = "../../../data/rs1_normals.ply";
+	//numVert = 135985;
+	//fn = "../../../data/Retrieval/rs8_proc.ply";
 	//numVert = 12345;
 	//fn = "../../../data/rs1_normals2.ply";
 	Mat pcTest = load_ply_simple(fn, numVert, useNormals);
@@ -956,7 +979,7 @@ int main()
 
 	int64 tick1 = cv::getTickCount();
 	vector < PPFPose* > results;
-	t_match_pc_ppf(pcTest, 15, 5, 0.05, ppfModel, results);
+	t_match_pc_ppf(pcTest, 15, 5, 0.025, ppfModel, results);
 	int64 tick2 = cv::getTickCount();
 	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
@@ -1077,6 +1100,39 @@ int main_synthetic()
 	return 0;
 }
 
+
+// flann tests
+int main_flann_tests()
+{
+	int useNormals = 1;
+	int withBbox = 1;
+	//int numVert = 16399;
+	//const char* fn = "../../../data/cheff_simple.ply";
+	//int numVert = 135142;
+	//const char* fn = "../../../data/chicken_high.ply";
+	//int numVert = 28291;
+	//const char* fn = "../../../data/parasaurolophus_low_normals2.ply";
+	int numVert = 6700;
+	const char* fn = "../../../data/parasaurolophus_6700.ply";
+	//int numVert = 51954;
+	//const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
+	//int numVert = 33368;
+	//const char* fn = "../../../data/chicken2.ply";
+	//int numVert = 13550;
+	//const char* fn = "../../../data/chicken3.ply";
+	
+	Mat pc = load_ply_simple(fn, numVert, useNormals);
+	//Mat pc = Mat(100,100,CV_32FC1);
+
+	Mat pcNorm;
+	double vp[3] ={0,0,0};
+	compute_normals_pc_3d(pc, pcNorm, 12, 1, vp);
+	
+	write_ply(pcNorm, "C:/Data/pcnorm.ply");
+
+	return 0;
+}
+
 // rotation test
 int main_rt()
 {
@@ -1117,7 +1173,9 @@ int main_sampling()
 	float dz = zRange[1] - zRange[0];
 	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
 
+#if defined (T_OPENMP)
 	omp_set_num_threads(8);
+#endif
 
 	int64 t1 = cv::getTickCount();
 	Mat sampled2 = sample_pc_octree(pc, xRange, yRange, zRange, 0.01);
@@ -1128,7 +1186,6 @@ int main_sampling()
 	Mat sampled = sample_pc_by_quantization(pc, xRange, yRange, zRange, 0.01);
 	t2 = cv::getTickCount();
 	printf("Elapsed : %f\n", (t2-t1)/cv::getTickFrequency());
-	//Mat sampled = sample_pc_kd_tree(pc, diameter*0.025, 15);
 
 #ifdef _MSC_VER
 	visualize_pc(sampled, 0, 1, 0, "Point Cloud");
