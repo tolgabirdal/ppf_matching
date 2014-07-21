@@ -8,6 +8,8 @@
 #include "THashInt.h"
 #include "fasthash.h"
 
+#include "visualize_win.h"
+
 using namespace std;
 using namespace cv;
 
@@ -147,9 +149,9 @@ float get_rejection_threshold(float* r, int m, float outlierScale)
 	medR=median_F(t, m);
 
 	for (i=0; i<m; i++)
-		t[i] = fabs(r[i]-medR);
+		t[i] = (float)fabs((double)r[i]-(double)medR);
 
-	s = median_F(t, m)/ 0.6745;
+	s = 1.48257968 * median_F(t, m);
 
 	threshold = (outlierScale*s+medR);
 
@@ -160,7 +162,7 @@ float get_rejection_threshold(float* r, int m, float outlierScale)
 // Kok Lim Low's linearization 
 void minimize_point_to_plane_metric(Mat Src, Mat Dst, Mat& X)
 {
-	Mat sub = Dst - Src;
+	//Mat sub = Dst - Src;
 	Mat A=Mat(Src.rows, 6, CV_64F);
 	Mat b=Mat(Src.rows, 1, CV_64F);
 
@@ -169,26 +171,27 @@ void minimize_point_to_plane_metric(Mat Src, Mat Dst, Mat& X)
 #endif
 	for (int i=0; i<Src.rows; i++)
 	{
-		const float *srcPt = (float*)&Src.data[i*Src.step];
-		const float *dstPt = (float*)&Dst.data[i*Dst.step];
+		const double *srcPt = (double*)&Src.data[i*Src.step];
+		const double *dstPt = (double*)&Dst.data[i*Dst.step];
+		const double *normals = &dstPt[3];
 		double *bVal = (double*)&b.data[i*b.step];
 		double *aRow = (double*)&A.data[i*A.step];
-		const float *normals = &dstPt[3];
 
-		double sD[3]={(double)srcPt[0], (double)srcPt[1], (double)srcPt[2]};
-		double dD[3]={(double)dstPt[0], (double)dstPt[1], (double)dstPt[2]};
-		double nD[3]={(double)dstPt[3], (double)dstPt[4], (double)dstPt[5]};
+		const double sub[3]={dstPt[0]-srcPt[0], dstPt[1]-srcPt[1], dstPt[2]-srcPt[2]};
 
-		double sub[3]={dD[0]-sD[0], dD[1]-sD[1], dD[2]-sD[2]};
+		*bVal = TDot3(sub, normals);
+		TCross(srcPt, normals, aRow);
 
-		*bVal = (double)TDot3(sub, nD);
-		TCross(sD, nD, aRow);
-
-		aRow[3] = nD[0];
-		aRow[4] = nD[1];
-		aRow[5] = nD[2];
+		aRow[3] = normals[0];
+		aRow[4] = normals[1];
+		aRow[5] = normals[2];
 	}
 
+	/*printf("\n\n");
+	print(A);
+	printf("\n\n");
+	print(b);
+	printf("\n\n");*/
 	//cv::solve(A, b, X, DECOMP_QR);
 	cv::solve(A, b, X, DECOMP_SVD);
 }
@@ -259,13 +262,14 @@ void get_transform_mat(Mat X, double Pose[16])
 	r1[4]= cx; r1[5]= -sx;
 	r1[7]= sx; r1[8]= cx;
 
-	r2[0]= cy; r2[2]= -sy;
-	r2[6]= sy; r2[8]= cy;
+	r2[0]= cy; r2[2]= sy;
+	r2[6]= -sy; r2[8]= cy;
 
 	r3[0]= cz; r3[1]= -sz;
 	r3[3]= sz; r3[4]= cz;
 
-	DCM = (R1*R2)*R3;
+	DCM = R1*(R2*R3);
+	//print(DCM);
 
 	//Pose(cv::Range(0, 3), cv::Range(0, 3)) = DCM;
 	Pose[0] = DCM.at<double>(0,0);
@@ -408,7 +412,7 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 		const int numSamples = round((double)(n/(div)));
 		//const double TolP = Tolerence*div2;
 		const double TolP = Tolerence*(double)(level+1)*(level+1);
-		const int MaxIterationsPyr = (int)((double)MaxIterations/div);
+		const int MaxIterationsPyr = round((double)MaxIterations/(level+1));
 
 		// Obtain the sampled point clouds for this level: Also rotates the normals
 		Mat SrcPC = transform_pc_pose(SrcPC0, Pose);
@@ -426,38 +430,37 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 		
 		int i=0;
 
-		int sizesResult[2] = {SrcPC.rows, 1};
-		float* distances = new float[SrcPC.rows];
-		int* indices = new int[SrcPC.rows];
+		int numElSrc = Src_Moved.rows;
+		int sizesResult[2] = {numElSrc, 1};
+		float* distances = new float[numElSrc];
+		int* indices = new int[numElSrc];
 
 		Mat Indices(2, sizesResult, CV_32S, indices, 0);
 		Mat Distances(2, sizesResult, CV_32F, distances, 0);
 
 		// use robust weighting for outlier treatment
-		int* indicesModel = new int[SrcPC.rows];
-		int* indicesScene = new int[SrcPC.rows];
+		int* indicesModel = new int[numElSrc];
+		int* indicesScene = new int[numElSrc];
 
-		int numElSrc = Src_Moved.rows;
 		int* newI = new int[numElSrc];
 		int* newJ = new int[numElSrc];
-//		int* duplicates = new int[numElSrc];
-
-		//Mat srcPCH;
-		//cv::convertPointsToHomogeneous(srcPC, srcPCH);
 
 		double PoseX[16]={0};
+		matrix_ident(4, PoseX);
+
 		while( (!(fval_perc<(1+TolP) && fval_perc>(1-TolP))) && i<MaxIterationsPyr)
 		{
 			int selInd = 0, di=0;
+			
+			query_pc_flann(flann, Src_Moved, Indices, Distances);
+			//cv::sqrt(Distances, Distances);
+			//searchTree.findNearest(Src_Moved, 1, INT_MAX, Indices, cv::noArray(), Distances);
+
 			for (di=0; di<numElSrc; di++)
 			{
-				newI[di]=i;
-				newJ[di]=0;
+				newI[di]=di;
+				newJ[di]=indices[di];
 			}
-
-			query_pc_flann(flann, Src_Moved, Indices, Distances);
-			cv::sqrt(Distances, Distances);
-			//searchTree.findNearest(Src_Moved, 1, INT_MAX, Indices, cv::noArray(), Distances);
 			
 			if (UseRobustReject)
 			{
@@ -515,7 +518,7 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 					}
 
 					indicesModel[ selInd ] = newI[ minIdxD ];
-					indicesScene[ selInd ] = newJ[ minIdxD ] ;
+					indicesScene[ selInd ] = dup ;
 					selInd++;
 				}
 			}
@@ -525,8 +528,8 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 			if (selInd)
 			{
 
-				Mat Src_Match = Mat(selInd, SrcPC.cols, CV_32F);
-				Mat Dst_Match = Mat(selInd, SrcPC.cols, CV_32F);
+				Mat Src_Match = Mat(selInd, SrcPC.cols, CV_64F);
+				Mat Dst_Match = Mat(selInd, SrcPC.cols, CV_64F);
 				
 				for(di=0; di<selInd; di++) 
 				{
@@ -534,26 +537,29 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 					const int indScene = indicesScene[di];
 					const float *srcPt = (float*)&SrcPC.data[indModel*SrcPC.step];
 					const float *dstPt = (float*)&DstPC0.data[indScene*DstPC0.step];
-					float *srcMatchPt = (float*)&Src_Match.data[di*Src_Match.step];
-					float *dstMatchPt = (float*)&Dst_Match.data[di*Dst_Match.step];
+					double *srcMatchPt = (double*)&Src_Match.data[di*Src_Match.step];
+					double *dstMatchPt = (double*)&Dst_Match.data[di*Dst_Match.step];
 					int ci=0;
 
 					for (ci=0; ci<SrcPC.cols; ci++)
 					{
-						srcMatchPt[ci] = srcPt[ci];
-						dstMatchPt[ci] = dstPt[ci];
+						srcMatchPt[ci] = (double)srcPt[ci];
+						dstMatchPt[ci] = (double)dstPt[ci];
 					}
 				}			
 
 				Mat X;
+				//print(Src_Match);
+				//print(Dst_Match);
 				minimize_point_to_plane_metric(Src_Match, Dst_Match, X);
+				//print(X);
 				//get_transform_mat(X, M);
 
 				get_transform_mat(X, PoseX);
 
 				Src_Moved = transform_pc_pose(SrcPC, PoseX);
 
-				double fval = cv::norm(Src_Match, Dst_Match)/(double)(Src_Match.rows);
+				double fval = cv::norm(Src_Moved, SrcPC)/(double)(Src_Moved.rows);
 
 				// Calculate change in error between itterations
 				fval_perc=fval/fval_old;
@@ -565,10 +571,14 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 					fval_min = fval;
 			}
 			else
-				break;			
+				break;
+
+			i++;
+
 
 			// visualize on demand
-
+			//Src_Moved = transform_pc_pose(SrcPC, PoseX);
+			//visualize_registration(Src_Moved, DstPC0, "Registration");			
 		}
 
 		double TempPose[16];
@@ -577,6 +587,13 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 		// no need to copy the last 4 rows
 		for (int c=0; c<12; c++)
 			Pose[c] = TempPose[c];
+
+		delete[] newI;
+		delete[] newJ;
+		delete[] indicesModel;
+		delete[] indicesScene;
+		delete[] distances;
+		delete[] indices;
 	}
 
 	destroy_flann(flann); flann = 0;

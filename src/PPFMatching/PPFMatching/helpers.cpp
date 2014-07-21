@@ -18,11 +18,12 @@ using namespace std;
 using namespace cv;
 
 #define FLANN_ALGORITHM_KD FLANN_INDEX_KDTREE_SINGLE
+#define FLANN_CHECKS FLANN_CHECKS_UNLIMITED
 #define FLANN_NUM_TREES 8
 #define FLANN_NUM_ITERATIONS 12 // not used
 #define FLANN_NUM_BRANCHINGS 32 // not used
 #define FLANN_TARGET_PRECISION -1
-#define FLANN_MAX_LEAF_SIZE 10
+#define FLANN_MAX_LEAF_SIZE 12
 
 Mat load_ply_simple(const char* fileName, int numVertices, int withNormals)
 {
@@ -222,13 +223,15 @@ void* index_pc_flann(Mat pc)
 	p.log_level = FLANN_LOG_NONE;
 	//p.log_destination = NULL;
 	p.algorithm = FLANN_ALGORITHM_KD;
-	p.checks = FLANN_CHECKS_UNLIMITED;
+	p.checks = FLANN_CHECKS;
 	p.trees = FLANN_NUM_TREES;
 	p.branching = FLANN_NUM_BRANCHINGS;
 	p.iterations = FLANN_NUM_ITERATIONS;
 	p.target_precision = FLANN_TARGET_PRECISION;
 	p.leaf_max_size = FLANN_MAX_LEAF_SIZE;
 	p.eps = 0;
+
+	flann_set_distance_type(flann::FLANN_DIST_EUCLIDEAN, 0);
 
 #if defined (T_OPENMP)
 		p.cores = omp_get_num_threads();
@@ -268,14 +271,14 @@ void destroy_flann(void* flannIndex)
 	FLANNParameters p;
 	p.log_level = FLANN_LOG_NONE;
 	p.algorithm = FLANN_ALGORITHM_KD;
-	p.checks = FLANN_CHECKS_UNLIMITED;
+	p.checks = FLANN_CHECKS;
 	p.trees = FLANN_NUM_TREES;
 	p.branching = FLANN_NUM_BRANCHINGS;
 	p.iterations = FLANN_NUM_ITERATIONS;
 	p.target_precision = FLANN_TARGET_PRECISION;
 	p.leaf_max_size = FLANN_MAX_LEAF_SIZE;
 	p.eps = 0;
-
+	
 	flann_free_index(flannIndex, &p);
 }
 
@@ -291,7 +294,7 @@ void query_pc_flann(void* flannIndex, Mat PC, Mat& Indices, Mat& Distances)
 	p.log_level = FLANN_LOG_NONE;
 	//p.log_destination = NULL;
 	p.algorithm = FLANN_ALGORITHM_KD;
-	p.checks = FLANN_CHECKS_UNLIMITED;
+	p.checks = FLANN_CHECKS;
 	p.trees = FLANN_NUM_TREES;
 	p.branching = FLANN_NUM_BRANCHINGS;
 	p.iterations = FLANN_NUM_ITERATIONS;

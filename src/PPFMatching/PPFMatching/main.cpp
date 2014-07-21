@@ -931,8 +931,23 @@ int main()
 	double Pose[16]={0.997621, 0.066989, -0.016266, -121.255793, -0.047424, 0.495682, -0.867208, -610.319320, -0.050030, 0.865917, 0.497680, -324.868454, 0.000000, 0.000000, 0.000000, 1.000000};
 	Mat modelT = transform_pc_pose(model, Pose);
 
+	Mat modelT2;
+	double vp[3]={0,0,0};
+	//print(modelT(cv::Range(0, 15), cv::Range(3, 6)));
+	compute_normals_pc_3d(modelT, modelT, 10, 1, vp);
+	//print(modelT(cv::Range(0, 15), cv::Range(3, 6)));
+	//print(modelT);
+	compute_normals_pc_3d(scene, scene, 10, 1, vp);
+
 	float Residual=0;
-	t_icp_register(modelT, scene, 0.0125, 150, 3, 1, 8, 0, 0, &Residual, Pose); 
+	omp_set_num_threads(8);
+	int64 t1 = cv::getTickCount();
+	t_icp_register(modelT, scene, 0.05, 100, 1, 1, 4, 0, 0, &Residual, Pose); 
+	int64 t2 = cv::getTickCount();
+	printf("Elapsed Time: %f\n", (double)(t2-t1)/cv::getTickFrequency());
+	
+	Mat modelRegistered = transform_pc_pose(modelT, Pose);
+	visualize_registration(modelRegistered, scene, "ICP Registration");			
 
 }
 
@@ -1126,7 +1141,7 @@ int main_flann_tests()
 
 	Mat pcNorm;
 	double vp[3] ={0,0,0};
-	compute_normals_pc_3d(pc, pcNorm, 12, 1, vp);
+	compute_normals_pc_3d(pc, pcNorm, 4, 1, vp);
 	
 	write_ply(pcNorm, "C:/Data/pcnorm.ply");
 
