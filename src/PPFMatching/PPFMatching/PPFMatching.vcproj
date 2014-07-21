@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="C:\Users\tolga\Documents\GitHub\opencv\modules\contrib\include;C:\Users\tolga\Documents\GitHub\opencv\modules\imgproc\include;C:\Users\tolga\Documents\GitHub\opencv\modules\core\include;C:\Users\tolga\Documents\GitHub\opencv\modules\highgui\include;C:\Users\tolga\Documents\GitHub\opencv\modules\nonfree\include;C:\Users\tolga\Documents\GitHub\opencv\modules\features2d\include;C:\Users\tolga\Documents\GitHub\opencv\modules\flann\include;./includes;C:\Users\tolga\Documents\GitHub\opencv\modules\calib3d\include;C:\Users\tolga\Documents\GitHub\opencv_contrib\modules\rgbd\include;C:\Users\tolga\Dropbox\Projects\eigen;C:\Users\tolga\Documents\GitHub\opencv\modules\viz\include;C:\Users\tolga\Documents\GitHub\ppf_matching\src\PPFMatching\PPFMatching\visualizations\vtk"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;FLANN_STATIC"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -62,7 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib tommyhash.lib opencv_core300d.lib opencv_flann300d.lib opencv_imgproc300d.lib opencv_highgui300d.lib opencv_nonfree300d.lib opencv_features2d300d.lib opencv_calib3d300d.lib opencv_contrib300d.lib"
+				AdditionalDependencies="flann_sd.lib opengl32.lib glu32.lib tommyhash.lib opencv_core300d.lib opencv_flann300d.lib opencv_imgproc300d.lib opencv_highgui300d.lib opencv_nonfree300d.lib opencv_features2d300d.lib opencv_calib3d300d.lib opencv_contrib300d.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="C:\Users\tolga\Documents\GitHub\opencv\bin\lib\Debug;./libs"
 				GenerateDebugInformation="true"
@@ -119,7 +119,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="C:\Users\tolga\Documents\GitHub\opencv\modules\contrib\include;C:\Users\tolga\Documents\GitHub\opencv\modules\imgproc\include;C:\Users\tolga\Documents\GitHub\opencv\modules\core\include;C:\Users\tolga\Documents\GitHub\opencv\modules\highgui\include;C:\Users\tolga\Documents\GitHub\opencv\modules\nonfree\include;C:\Users\tolga\Documents\GitHub\opencv\modules\features2d\include;C:\Users\tolga\Documents\GitHub\opencv\modules\flann\include;./includes;C:\Users\tolga\Documents\GitHub\opencv\modules\calib3d\include;C:\Users\tolga\Documents\GitHub\opencv_contrib\modules\rgbd\include;C:\Users\tolga\Dropbox\Projects\eigen;C:\Users\tolga\Documents\GitHub\opencv\modules\viz\include;C:\Users\tolga\Documents\GitHub\ppf_matching\src\PPFMatching\PPFMatching\visualizations\vtk"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;FLANN_STATIC"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				OpenMP="true"
@@ -138,7 +138,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib tommyhash.lib opencv_core300.lib opencv_imgproc300.lib opencv_flann300.lib opencv_highgui300.lib opencv_nonfree300.lib opencv_features2d300.lib opencv_calib3d300.lib opencv_contrib300.lib"
+				AdditionalDependencies="flann_s.lib opengl32.lib glu32.lib tommyhash.lib opencv_core300.lib opencv_imgproc300.lib opencv_flann300.lib opencv_highgui300.lib opencv_nonfree300.lib opencv_features2d300.lib opencv_calib3d300.lib opencv_contrib300.lib flann_s.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="C:\Users\tolga\Documents\GitHub\opencv\bin\lib\Release;./libs"
 				GenerateDebugInformation="true"
@@ -187,6 +187,26 @@
 				>
 			</File>
 			<File
+				RelativePath=".\dsyevc3.c"
+				>
+			</File>
+			<File
+				RelativePath=".\dsyevh3.c"
+				>
+			</File>
+			<File
+				RelativePath=".\dsyevq3.c"
+				>
+			</File>
+			<File
+				RelativePath=".\dsytrd3.c"
+				>
+			</File>
+			<File
+				RelativePath=".\fasthash.c"
+				>
+			</File>
+			<File
 				RelativePath=".\gdiam.cpp"
 				>
 			</File>
@@ -204,6 +224,10 @@
 			</File>
 			<File
 				RelativePath=".\normal.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\t_icp.cpp"
 				>
 			</File>
 			<File
@@ -245,6 +269,26 @@
 				>
 			</File>
 			<File
+				RelativePath=".\dsyevc3.h"
+				>
+			</File>
+			<File
+				RelativePath=".\dsyevh3.h"
+				>
+			</File>
+			<File
+				RelativePath=".\dsyevq3.h"
+				>
+			</File>
+			<File
+				RelativePath=".\dsytrd3.h"
+				>
+			</File>
+			<File
+				RelativePath=".\fasthash.h"
+				>
+			</File>
+			<File
 				RelativePath=".\gdiam.hpp"
 				>
 			</File>
@@ -258,6 +302,10 @@
 			</File>
 			<File
 				RelativePath=".\helpers.h"
+				>
+			</File>
+			<File
+				RelativePath=".\t_icp.h"
 				>
 			</File>
 			<File
