@@ -26,14 +26,12 @@
 #ifndef _FASTHASH_H
 #define _FASTHASH_H
 
-#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef unsigned int 	uint32_t;
-typedef unsigned __int64 	uint64_t;
 
 /**
  * fasthash32 - 32-bit implementation of fasthash

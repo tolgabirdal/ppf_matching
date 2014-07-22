@@ -8,7 +8,7 @@
 
 //using namespace cv;
 
-typedef int (__cdecl *T_ICP_CALLBACK)(double Pose[4][4], void* UserData);
+typedef int (*T_ICP_CALLBACK)(double Pose[4][4], void* UserData);
 
 #if defined (__cplusplus)
 extern "C" {

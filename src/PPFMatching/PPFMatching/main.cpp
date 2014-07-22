@@ -5,7 +5,7 @@
 #include <time.h>
 
 #include "visualize_win.h"
-#include <opencv2/core/utility.hpp>
+#include <opencv2/core/core.hpp>
 #include "helpers.h"
 #include "c_utils.h"
 #include "hash_murmur.h"
@@ -946,8 +946,10 @@ int main()
 	int64 t2 = cv::getTickCount();
 	printf("Elapsed Time: %f\n", (double)(t2-t1)/cv::getTickFrequency());
 	
+  #ifdef _MSC_VER
 	Mat modelRegistered = transform_pc_pose(modelT, Pose);
 	visualize_registration(modelRegistered, scene, "ICP Registration");			
+  #endif
 
 }
 
@@ -1018,8 +1020,10 @@ int main_real_data()
 		printf("\n");
 
 		// Visualize registration
+    #ifdef _MSC_VER
 		Mat pct = transform_pc_pose(pc, pose->Pose);
 		visualize_registration(pcTest, pct, "Registration");
+    #endif
 	}
 
 	return 0;
@@ -1090,7 +1094,9 @@ int main_synthetic()
 
 			// Visualize registration
 			Mat pct = transform_pc_pose(pc, pose->Pose);
+      #ifdef _MSC_VER
 			visualize_registration(pcPerturbTrans, pct, "Registration");
+      #endif
 		}
 
 	}
