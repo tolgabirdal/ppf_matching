@@ -112,6 +112,7 @@ extern "C" {
 #endif
 
 	int wait_window(TWindowGL* window);
+	int wait_window_ms(TWindowGL* window, int miliSecs);
 	int update_window(TWindowGL* window);
 
 	static LRESULT	CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc

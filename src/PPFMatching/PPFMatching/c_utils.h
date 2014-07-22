@@ -193,6 +193,19 @@ extern "C" {
 		t[2]=Pose[11];
 	}
 
+	static __inline void pose_to_r(const double Pose[16], double R[9])
+	{
+		R[0] = Pose[0];
+		R[1] = Pose[1];
+		R[2] = Pose[2];
+		R[3] = Pose[4];
+		R[4] = Pose[5];
+		R[5] = Pose[6];
+		R[6] = Pose[8];
+		R[7] = Pose[9];
+		R[8] = Pose[10];
+	}
+
 
 	/*static __inline int next_power_of_two(int x)
 	{

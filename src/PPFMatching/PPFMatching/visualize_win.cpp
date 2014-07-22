@@ -297,17 +297,20 @@ void* visualize_pc(Mat pc, int withNormals, int withBbox, int withOctree, char* 
 }
 
 
-
-void* visualize_registration(Mat pc1, Mat pc2, char* Title)
+TWindowGL* window=0;
+void* visualize_registration(Mat pc1, Mat pc2, char* Title, int waitMS)
 {
 	int width = 1024;
 	int height = 1024;
 
-	TWindowGL* window=(TWindowGL*)calloc(1, sizeof(TWindowGL));
-	int status=CreateGLWindow(window, Title, 300, 50, width, height, 24);
+	if (!window)
+	{
+		window=(TWindowGL*)calloc(1, sizeof(TWindowGL));
+		int status=CreateGLWindow(window, Title, 300, 50, width, height, 24);
+		MoveGLWindow(window, 300, 50);
+		update_window(window);
+	}
 
-	MoveGLWindow(window, 300, 50);
-	update_window(window);
 
 	glEnable3D(45, 1, 5, width, height);
 
@@ -324,9 +327,12 @@ void* visualize_registration(Mat pc1, Mat pc2, char* Title)
 	register_custom_gl_scene(window, display_registration, wd);
 
 	//update_window(window);
-	wait_window(window);
+	if (waitMS <=0)
+		wait_window(window);
+	else
+		wait_window_ms(window, waitMS);
 
-	close_window(window);
+	//close_window(window);
 
 	
 

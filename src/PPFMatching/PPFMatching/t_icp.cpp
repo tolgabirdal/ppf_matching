@@ -13,7 +13,25 @@
 using namespace std;
 using namespace cv;
 
-void subtract_mean_from_columns(Mat SrcPC, double mean[3])
+void subtract_columns(Mat SrcPC, double mean[3])
+{
+	int height = SrcPC.rows;
+	int width = SrcPC.cols;
+
+	for (int i=0; i<height; i++)
+	{
+		float *row = (float*)(&SrcPC.data[i*SrcPC.step]);
+		{
+			row[0]-=(float)mean[0];
+			row[1]-=(float)mean[1];
+			row[2]-=(float)mean[2];
+		}
+	}
+}
+
+
+// as in PCA
+void compute_mean_cols(Mat SrcPC, double mean[3])
 {
 	int height = SrcPC.rows;
 	int width = SrcPC.cols;
@@ -23,7 +41,6 @@ void subtract_mean_from_columns(Mat SrcPC, double mean[3])
 	for (int i=0; i<height; i++)
 	{
 		const float *row = (float*)(&SrcPC.data[i*SrcPC.step]);
-		//for (int j=0; j<width; j++)
 		{
 			mean1 += (double)row[0];
 			mean2 += (double)row[1];
@@ -35,20 +52,16 @@ void subtract_mean_from_columns(Mat SrcPC, double mean[3])
 	mean2/=(double)height;
 	mean3/=(double)height;
 
-	for (int i=0; i<height; i++)
-	{
-		float *row = (float*)(&SrcPC.data[i*SrcPC.step]);
-		//for (int j=0; j<width; j++)
-		{
-			row[0]-=(float)mean1;
-			row[1]-=(float)mean2;
-			row[2]-=(float)mean3;
-		}
-	}
-
 	mean[0] = mean1;
 	mean[1] = mean2;
 	mean[2] = mean3;
+}
+
+// as in PCA
+void subtract_mean_from_columns(Mat SrcPC, double mean[3])
+{
+	compute_mean_cols(SrcPC, mean);
+	subtract_columns(SrcPC, mean);
 }
 
 double compute_dist_to_origin(Mat SrcPC)
@@ -60,10 +73,7 @@ double compute_dist_to_origin(Mat SrcPC)
 	for (int i=0; i<height; i++)
 	{
 		const float *row = (float*)(&SrcPC.data[i*SrcPC.step]);
-		//for (int j=0; j<width; j++)
-		{
-			dist += sqrt(row[0]*row[0]+row[1]*row[1]+row[2]*row[2]);
-		}
+		dist += sqrt(row[0]*row[0]+row[1]*row[1]+row[2]*row[2]);
 	}
 
 	return dist;
@@ -196,7 +206,7 @@ void minimize_point_to_plane_metric(Mat Src, Mat Dst, Mat& X)
 	cv::solve(A, b, X, DECOMP_SVD);
 }
 
-
+/*
 void get_transform_mat(Mat X, Mat& Pose)
 {
 	Mat DCM;
@@ -235,7 +245,7 @@ void get_transform_mat(Mat X, Mat& Pose)
 	poseT[7]=x[4];
 	poseT[11]=x[5];
 	//poseT[15]=1;
-}
+}*/
 
 
 void get_transform_mat(Mat X, double Pose[16])
@@ -287,7 +297,7 @@ void get_transform_mat(Mat X, double Pose[16])
 	Pose[15]=1;
 }
 
-
+/*
 void move_points(Mat Src, Mat M, Mat& SrcMoved)
 {
 	Mat temp = Src.colRange(0,3);
@@ -302,14 +312,8 @@ void move_points(Mat Src, double Pose[16], Mat &SrcMoved)
 	convertPointsToHomogeneous(Src, SrcMoved);
 	SrcMoved = M * SrcMoved;
 	convertPointsFromHomogeneous(SrcMoved, SrcMoved);
-}
+}*/
 
-int qsort_compare (const void *a, const void *b)
-{
-    const int *ia = (const int *)a; // casting pointer types 
-    const int *ib = (const int *)b;
-    return *ia  - *ib; 
-}
 
 /* Fast way to look up the duplicates
    duplicates is pre-allocated
@@ -318,52 +322,16 @@ int qsort_compare (const void *a, const void *b)
 hashtable_int* get_hashtable(int* data, int length, int numMaxElement)
 {
 	hashtable_int* hashtable = hashtable_int_create(numMaxElement*2, 0);
-//	memset(duplicates, 0, sizeof(int)*length);
-	
-//	int n=0;
-	
 	for(int i = 0; i < length; i++)
 	{
 		const int key = data[i];
-		//const int hashKey = fasthash32((void*)&key, sizeof(int), 0xAF841C);
-		//hashnode_i* node = hashtable_int_get_bucket_hashed(hashtable, key+1);
-/*
-		if (node)
-		{
-			duplicates[i] = key;
-			n++;
-		}*/
 
 		hashtable_int_insert_hashed(hashtable, key+1, (void*)(i+1));
 	}
 	
-	//*numDuplicates = n;
 	return hashtable;
 }
 
-/*
-int* get_duplicates(int* data, int length, int maxElement, int* numDuplicates)
-{
-	int n=0;
-	int* duplicates=new int ;
-	int* copy = new int[length];
-	memcpy(copy, data, sizeof(int)*length);
-
-	qsort(copy, length, sizeof(int), qsort_compare);
-
-	for(i = 0; i < length; i++)
-	{
-		if (array[i] == array[i+1])
-		{
-
-			n++;
-		}
-	}
-	
-	*numDuplicates = n;
-	return duplicates;
-}
-*/
 // source point clouds are assumed to contain their normals
 int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, const int MaxIterations, const float RejectionScale, const int NumNeighborsCorr, const int NumLevels, const int SampleType, const T_ICP_CALLBACK RegistrationVisFunction, float* Residual, double Pose[16])
 {
@@ -375,22 +343,29 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 	Mat SrcTemp = SrcPC.clone();
 	Mat DstTemp = DstPC.clone();
 	double meanSrc[3], meanDst[3];
-	subtract_mean_from_columns(SrcTemp, meanSrc);
-	subtract_mean_from_columns(DstTemp, meanDst);
+	compute_mean_cols(SrcTemp, meanSrc);
+	compute_mean_cols(DstTemp, meanDst);
+	double meanAvg[3]={0.5*(meanSrc[0]+meanDst[0]), 0.5*(meanSrc[1]+meanDst[1]), 0.5*(meanSrc[2]+meanDst[2])};
+	subtract_columns(SrcTemp, meanAvg);
+	subtract_columns(DstTemp, meanAvg);
+	//subtract_mean_from_columns(SrcTemp, meanSrc);
+	//subtract_mean_from_columns(DstTemp, meanDst);
 
 	double distSrc = compute_dist_to_origin(SrcTemp);
 	double distDst = compute_dist_to_origin(DstTemp);
 
 	double scale = (double)n / ((distSrc + distDst)*0.5);
 
-	SrcTemp=SrcPC;
-	DstTemp=DstPC;
-	SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) = SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3))  * scale;
-	DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) = DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3))  * scale;
+	//SrcTemp=SrcPC.clone();
+	//DstTemp=DstPC.clone();
+	SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) = (SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) )  * scale;
+	DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) = (DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) )  * scale;
 	//DstTemp = DstPC * scale;
 
-	Mat SrcPC0 = SrcTemp.clone();
-	Mat DstPC0 = DstTemp.clone();
+	//Mat SrcPC0 = SrcTemp.clone();
+	//Mat DstPC0 = DstTemp.clone();
+	Mat SrcPC0 = SrcTemp;
+	Mat DstPC0 = DstTemp;
 	
 	// initialize pose
 	matrix_ident(4, Pose);
@@ -568,7 +543,8 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 
 				Src_Moved = transform_pc_pose(SrcPC, PoseX);
 
-				double fval = cv::norm(Src_Moved, SrcPC)/(double)(Src_Moved.rows);
+				//double fval = cv::norm(Src_Moved, SrcPC)/(double)(Src_Moved.rows);
+				double fval = cv::norm(Src_Match, Dst_Match)/(double)(Src_Moved.rows);
 
 				// Calculate change in error between itterations
 				fval_perc=fval/fval_old;
@@ -582,20 +558,21 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 			else
 				break;
 
+			//RegistrationVisFunction(PoseX, (void*)SrcPC);
+
 			i++;
 
-
 			// visualize on demand
-#if defined (_MSC_VER)
-			//Src_Moved = transform_pc_pose(SrcPC, PoseX);
-			//visualize_registration(Src_Moved, DstPC0, "Registration");			
-#endif
+/*#if defined (_MSC_VER)
+			Src_Moved = transform_pc_pose(SrcPC, PoseX);
+			visualize_registration(Src_Moved, DstPC0, "Registration", 150);
+#endif*/
 		}
 
 		double TempPose[16];
 		matrix_product44(PoseX, Pose, TempPose);
 
-		// no need to copy the last 4 rows
+		// no need to copy the last 4 rows	
 		for (int c=0; c<12; c++)
 			Pose[c] = TempPose[c];
 
@@ -606,6 +583,19 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 		delete[] distances;
 		delete[] indices;
 	}
+
+	// Pose(1:3, 4) = Pose(1:3, 4)./scale;
+	Pose[3] = Pose[3]/scale + meanAvg[0];
+	Pose[7] = Pose[7]/scale + meanAvg[1];
+	Pose[11] = Pose[11]/scale + meanAvg[2];
+
+	//Pose(1:3, 4) = Pose(1:3, 4)./scale + meanAvg' - Pose(1:3, 1:3)*meanAvg';
+	double Rpose[9], Cpose[3];
+	pose_to_r(Pose, Rpose);
+	matrix_product331(Rpose, meanAvg, Cpose);
+	Pose[3] -= Cpose[0];
+	Pose[7] -= Cpose[1];
+	Pose[11] -= Cpose[2];
 
 	destroy_flann(flann); flann = 0;
 	return 0;

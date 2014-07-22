@@ -901,9 +901,9 @@ Mat transform_pc_pose(Mat pc, double Pose[16])
 #endif
 	for (int i=0; i<pc.rows; i++)
 	{
-		float *pcData = (float*)(&pc.data[i*pc.step]);
+		const float *pcData = (float*)(&pc.data[i*pc.step]);
 		float *pcDataT = (float*)(&pct.data[i*pct.step]);
-		float *n1 = &pcData[3];
+		const float *n1 = &pcData[3];
 		float *nT = &pcDataT[3];
 
 		double p[4] = {(double)pcData[0], (double)pcData[1], (double)pcData[2], 1};

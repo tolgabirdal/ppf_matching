@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+//#include <conio.h>
 
 #include "visualize_win.h"
 #include <opencv2/core/utility.hpp>
@@ -913,7 +914,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 }
 
 // test icp
-int main()
+int main_icp_test()
 {
 	int useNormals = 1;
 	int withBbox = 1;
@@ -924,8 +925,10 @@ int main()
 	Mat model = load_ply_simple(fn, numVert, useNormals);
 
 	// scene
-	numVert = 114373;
-	fn = "../../../data/rs1_normals.ply";
+	//numVert = 114373;
+	//fn = "../../../data/rs1_normals.ply";
+	numVert = 113732;
+	fn = "../../../data/Retrieval/rs22_proc2.ply";
 	Mat scene = load_ply_simple(fn, numVert, useNormals);
 
 	double Pose[16]={0.997621, 0.066989, -0.016266, -121.255793, -0.047424, 0.495682, -0.867208, -610.319320, -0.050030, 0.865917, 0.497680, -324.868454, 0.000000, 0.000000, 0.000000, 1.000000};
@@ -948,13 +951,13 @@ int main()
 	
 #if defined (_MSC_VER)
 	Mat modelRegistered = transform_pc_pose(modelT, Pose);
-	visualize_registration(modelRegistered, scene, "ICP Registration");			
+	visualize_registration(modelRegistered, scene, "ICP Registration", 150);
 #endif
 
 }
 
 // real data
-int main_real_data()
+int main()
 {
 	int useNormals = 1;
 	int withBbox = 1;
@@ -964,10 +967,10 @@ int main_real_data()
 	//const char* fn = "../../../data/chicken_high.ply";
 	//int numVert = 28291;
 	//const char* fn = "../../../data/parasaurolophus_low_normals2.ply";
-	int numVert = 6700;
-	const char* fn = "../../../data/parasaurolophus_6700.ply";
-	//int numVert = 51954;
-	//const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
+	//int numVert = 6700;
+	//const char* fn = "../../../data/parasaurolophus_6700.ply";
+	int numVert = 51954;
+	const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
 	//int numVert = 33368;
 	//const char* fn = "../../../data/chicken2.ply";
 	//int numVert = 13550;
@@ -976,17 +979,22 @@ int main_real_data()
 	Mat pc = load_ply_simple(fn, numVert, useNormals);
 	//Mat pc = Mat(100,100,CV_32FC1);
 
+	const char* outputResultFile = "C:/Data/PPFICPOutput.ply";
+	const char* scenePCFile = "C:/Data/PPFICPScene.ply";
+
 	TPPFModelPC* ppfModel = 0;
 	printf("Training...");
-	Mat PPFMAt = train_pc_ppf(pc, 0.025, 0.025, 30, &ppfModel);
+	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
 	printf("\nTraining complete. Loading model...");
 
 	//numVert = 122503;
-	//fn = "../../../data/SpaceTime/Scena1/scene1-scene4_0_ascii.ply";
+	//fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
+	numVert = 131834;
+	fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
 	//numVert = 113732;
 	////fn = "../../../data/Retrieval/rs22_proc2.ply";
-	numVert = 114373;
-	fn = "../../../data/rs1_normals.ply";
+	//numVert = 114373;
+	//fn = "../../../data/rs1_normals.ply";
 	//numVert = 135985;
 	//fn = "../../../data/Retrieval/rs8_proc.ply";
 	//numVert = 12345;
@@ -996,7 +1004,7 @@ int main_real_data()
 
 	int64 tick1 = cv::getTickCount();
 	vector < PPFPose* > results;
-	t_match_pc_ppf(pcTest, 15, 5, 0.025, ppfModel, results);
+	t_match_pc_ppf(pcTest, 15, 5, 0.05, ppfModel, results);
 	int64 tick2 = cv::getTickCount();
 	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
@@ -1019,9 +1027,38 @@ int main_real_data()
 		}
 		printf("\n");
 
+		// run a registration for each pose
+		Mat modelT = transform_pc_pose(pc, pose->Pose);
+
+		double PoseICP[16]={0}, PoseFull[16]={0};
+		float Residual=0;
+		omp_set_num_threads(8);
+		int64 t1 = cv::getTickCount();
+		//getch();
+		t_icp_register(modelT, pcTest, 0.001, 300, 3, 1, 8, 0, 0, &Residual, PoseICP); 
+
+		matrix_product44(PoseICP, pose->Pose, PoseFull);
+
+		for (int j=0; j<4; j++)
+		{
+			for (int k=0; k<4; k++)
+			{
+				printf("%f ", PoseFull[j*4+k]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+		int64 t2 = cv::getTickCount();
+		printf("Pose %d - Elapsed Time: %f\n", i, (double)(t2-t1)/cv::getTickFrequency());
+
 		// Visualize registration
-		Mat pct = transform_pc_pose(pc, pose->Pose);
+#if defined (_MSC_VER)
+		Mat pct = transform_pc_pose(pc,PoseFull);
 		visualize_registration(pcTest, pct, "Registration");
+#endif
+
+		write_ply(pct, outputResultFile);
+		write_ply(pcTest, scenePCFile);
 	}
 
 	return 0;

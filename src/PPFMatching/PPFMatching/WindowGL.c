@@ -1,6 +1,7 @@
 
 
 #include <math.h>
+#include <time.h>
 #include "WindowGL.h"
 #include "trackball.h"
 #include "TRgbGL.h"
@@ -1071,6 +1072,53 @@ int update_window(TWindowGL* window)
 				}
 			}
 		}
+	}
+
+	return 0;
+
+}
+
+int wait_window_ms(TWindowGL* window, int miliSecs)
+{
+	int is_processed = 0;
+	MSG msg;
+	clock_t t1=time(0);
+	clock_t t2=t1;
+
+	while((double)(t2-t1)*1000.0 < miliSecs)										// Loop That Runs While done=FALSE
+	{
+		if (PeekMessage(&msg,NULL,0,0,PM_REMOVE))		// Is There A Message Waiting?
+		{
+			if (msg.message==WM_QUIT)					// Have We Received A Quit Message?
+			{
+				break;								// If So done=TRUE
+			}
+			else										// If Not, Deal With Window Messages
+			{
+				TranslateMessage(&msg);					// Translate The Message
+				DispatchMessage(&msg);					// Dispatch The Message
+			}
+		}
+		else											// If There Are No Messages
+		{
+			// Draw The Scene.  Watch For ESC Key And Quit Messages From DrawGLScene()
+			if (window->active)									// Program Active?
+			{
+				if (window->keys[VK_ESCAPE])					// Was Escape Pressed?
+				{
+					break;							// ESC Signalled A Quit
+				}
+				else									// Not Time To Quit, Update Screen
+				{					
+					window->PaintCallback(window->preservedData);
+					//DrawGLScene();						// Draw The Scene
+					SwapBuffers(window->hDC);			// Swap Buffers (Double Buffering)
+				}
+			}
+		}
+	
+		t2=time(0);
+
 	}
 
 	return 0;
