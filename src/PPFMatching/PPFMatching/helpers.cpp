@@ -1193,7 +1193,7 @@ int compute_normals_pc_3d(const Mat PC, Mat& PCNormals, const int NumNeighbors, 
 		else
 		{
 			if (w[1]<w[2])
-				minEigID = 1;			
+				minEigID = 1;
 		}
 
 		//printf("%f %f %f, %f\n", w[0], w[1], w[2], w[minEigID]);

@@ -942,12 +942,14 @@ int main()
 	float Residual=0;
 	omp_set_num_threads(8);
 	int64 t1 = cv::getTickCount();
-	t_icp_register(modelT, scene, 0.05, 100, 1, 1, 4, 0, 0, &Residual, Pose); 
+	t_icp_register(modelT, scene, 0.01, 200, 1, 1, 8, 0, 0, &Residual, Pose); 
 	int64 t2 = cv::getTickCount();
 	printf("Elapsed Time: %f\n", (double)(t2-t1)/cv::getTickFrequency());
 	
+#if defined (_MSC_VER)
 	Mat modelRegistered = transform_pc_pose(modelT, Pose);
 	visualize_registration(modelRegistered, scene, "ICP Registration");			
+#endif
 
 }
 

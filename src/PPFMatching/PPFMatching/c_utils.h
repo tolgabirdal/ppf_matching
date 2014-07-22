@@ -44,10 +44,12 @@ v[2]/=normTemp;\
 	f = (atan2(TNorm3(c), TDot3(a, b)));\
 }
 
+#if defined(_MSC_VER)
 __inline int round(double number)
 {
     return (number >= 0) ? (int)(number + 0.5) : (int)(number - 0.5);
 }
+#endif
 
 #if defined (__cplusplus)
 extern "C" {

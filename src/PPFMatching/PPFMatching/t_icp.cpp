@@ -221,8 +221,8 @@ void get_transform_mat(Mat X, Mat& Pose)
 	r1[4]= cx; r1[5]= -sx;
 	r1[7]= sx; r1[8]= cx;
 
-	r2[0]= cy; r2[2]= -sy;
-	r2[6]= sy; r2[8]= cy;
+	r2[0]= cy; r2[2]= sy;
+	r2[6]= -sy; r2[8]= cy;
 
 	r3[0]= cz; r3[1]= -sz;
 	r3[3]= sz; r3[4]= cz;
@@ -421,6 +421,15 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 
 		const int sampleStep = round((double)n/(double)numSamples);
 		std::vector<int> srcSampleInd;
+
+		/*
+			Downsample the model point clouds. If more optimization is required,
+			one could also downsample the scene points, but I think this might 
+			decrease the accuracy. That's why I won't be implementing it at this
+			moment.
+
+			Also note that you have to compute a KD-tree for each level.
+		*/
 		SrcPC = sample_pc_uniform_ind(SrcPC, sampleStep, srcSampleInd);
 
 		double fval_old=9999999999;
@@ -577,8 +586,10 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 
 
 			// visualize on demand
+#if defined (_MSC_VER)
 			//Src_Moved = transform_pc_pose(SrcPC, PoseX);
 			//visualize_registration(Src_Moved, DstPC0, "Registration");			
+#endif
 		}
 
 		double TempPose[16];
