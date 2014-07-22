@@ -5,7 +5,7 @@
 #include <time.h>
 
 #include "visualize_win.h"
-#include <opencv2/core/utility.hpp>
+#include <opencv2/core/core.hpp>
 #include "helpers.h"
 #include "c_utils.h"
 #include "hash_murmur.h"
