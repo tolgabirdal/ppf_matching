@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -6,7 +5,12 @@
 //#include <conio.h>
 
 #include "visualize_win.h"
-#include <opencv2/core/utility.hpp>
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION > 2
+  #include <opencv2/core/utility.hpp>
+#else
+  #include <opencv2/core/core.hpp>
+#endif
 #include "helpers.h"
 #include "c_utils.h"
 #include "hash_murmur.h"
@@ -1052,8 +1056,8 @@ int main()
 		printf("Pose %d - Elapsed Time: %f\n", i, (double)(t2-t1)/cv::getTickFrequency());
 
 		// Visualize registration
-#if defined (_MSC_VER)
 		Mat pct = transform_pc_pose(pc,PoseFull);
+#if defined (_MSC_VER)
 		visualize_registration(pcTest, pct, "Registration");
 #endif
 
@@ -1128,8 +1132,10 @@ int main_synthetic()
 			printf("\n");
 
 			// Visualize registration
+#if defined (_MSC_VER)
 			Mat pct = transform_pc_pose(pc, pose->Pose);
 			visualize_registration(pcPerturbTrans, pct, "Registration");
+#endif
 		}
 
 	}
