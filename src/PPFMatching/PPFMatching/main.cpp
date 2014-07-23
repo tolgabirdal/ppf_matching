@@ -973,8 +973,15 @@ int main()
 	//const char* fn = "../../../data/parasaurolophus_low_normals2.ply";
 	//int numVert = 6700;
 	//const char* fn = "../../../data/parasaurolophus_6700.ply";
-	int numVert = 51954;
-	const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
+	//int numVert = 51954;
+	//const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
+	//int numVert = 18367;
+	//const char* fn = "../../../data/SpaceTime/Scena2/scene2-model2_0_ascii.ply";
+	//int numVert = 33560;
+	//const char* fn = "../../../data/rgbd-scenes-v2/model/sofa_3_0_ascii.ply";
+	int numVert = 7940;
+	const char* fn = "../../../data/stereo/im60.ply";
+	
 	//int numVert = 33368;
 	//const char* fn = "../../../data/chicken2.ply";
 	//int numVert = 13550;
@@ -993,8 +1000,17 @@ int main()
 
 	//numVert = 122503;
 	//fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
-	numVert = 131834;
-	fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
+	//numVert = 131834;
+	//fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
+	//numVert = 120366;
+	//fn = "../../../data/SpaceTime/Scena2/scene2-scene2_0_ascii.ply";
+	//numVert = 917991;
+	//fn = "../../../data/rgbd-scenes-v2/pc/08_ascii.ply";
+	//numVert = 894220;
+	//fn = "../../../data/lidar/pc/11_ascii.ply";
+	numVert = 49195;
+	fn = "../../../data/stereo/depth12.ply";
+	
 	//numVert = 113732;
 	////fn = "../../../data/Retrieval/rs22_proc2.ply";
 	//numVert = 114373;
