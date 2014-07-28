@@ -27,7 +27,7 @@
 
 #else   // defined(_MSC_VER)
 
-#define TLong long
+#define long long TLong
 
 #define FORCE_INLINE __attribute__((always_inline))
 
@@ -150,7 +150,7 @@ c2 = c2*5+0x6bce6396;
 }*/
 
 //
-//FORCE_INLINE TLong fmix64 ( TLong k )
+//FORCE_INLINE long fmix64 ( long k )
 //{
 //	k ^= k >> 33;
 //	k *= BIG_CONSTANT(0xff51afd7ed558ccd);

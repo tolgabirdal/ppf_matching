@@ -16,12 +16,12 @@
 #include "hash_murmur.h"
 #include "fasthash.h"
 #include "t_icp.h"
-
+#include "tmesh.h"
 
 using namespace std;
 using namespace cv;
 
-//#define USE_TOMMY_HASHTABLE
+#define USE_TOMMY_HASHTABLE
 
 #if defined( USE_TOMMY_HASHTABLE )
 #include <tommy.h>
@@ -467,13 +467,14 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	float distanceStep = diameter * sampling_step_relative;
 
 	//Mat sampled = sample_pc_octree(PC, xRange, yRange, zRange, sampling_step_relative);
-	Mat sampled = sample_pc_by_quantization(PC, xRange, yRange, zRange, sampling_step_relative);
+	Mat sampled = sample_pc_by_quantization(PC, xRange, yRange, zRange, sampling_step_relative,1);
 	
 	//visualize_pc(sampled, 1, 1, 0, "reg");
 
     double angleStepRadians = (360.0/angle_step_relative)*PI/180.0;
 
-	int size = next_power_of_two(sampled.rows*sampled.rows);
+	//int size = next_power_of_two(sampled.rows*sampled.rows);
+	int size = sampled.rows*sampled.rows;
 
 #if defined (USE_TOMMY_HASHTABLE)
 	tommy_hashtable* hashTable = (tommy_hashtable*)malloc(sizeof(tommy_hashtable));
@@ -492,6 +493,11 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	
 	// TODO: Maybe I could sample 1/5th of them here. Check the performance later.
 	int numRefPoints = sampled.rows;
+
+	// pre-allocate the hash nodes
+	THash* hashNodes = (THash*)calloc(numRefPoints*numRefPoints, sizeof(THash));
+
+	//#pragma omp parallel for
 	for (int i=0; i<numRefPoints; i++)
 	{
 		float* f1 = (float*)(&sampled.data[i * sampledStep]);
@@ -516,7 +522,8 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 				unsigned int corrInd = i*numRefPoints+j;
 				unsigned int ppfInd = corrInd*ppfStep;
 
-				THash* hashNode = (THash*)calloc(1, sizeof(THash));
+				THash* hashNode = &hashNodes[i*numRefPoints+j];
+				//THash* hashNode = (THash*)calloc(1, sizeof(THash));
 				hashNode->id = hashValue;
 				//hashNode->data = (void*)corrInd;
 				hashNode->i = i;
@@ -525,6 +532,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 
 #if defined(USE_TOMMY_HASHTABLE)
 				//tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, (hashValue));
+#pragma omp critical
 				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashValue));
 #else
 				hashtable_int_insert_hashed(hashTable, hashValue, (void*)hashNode);
@@ -588,7 +596,7 @@ int sort_pose_clusters (const PoseCluster* a, const PoseCluster* b)
    return ( a->numVotes > b->numVotes );
 }
 
-int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionThreshold, const double RotationThreshold, const double MinMatchScore, vector < PPFPose* >& finalPoses)
+int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionThreshold, const double RotationThreshold, const double MinMatchScore, const bool UseWeightedAvg, vector < PPFPose* >& finalPoses)
 {
 	vector<PoseCluster*> poseClusters;
 	poseClusters.clear();
@@ -627,45 +635,107 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 
 	// TODO: Use MinMatchScore
 
-	for (int i=0; i<poseClusters.size(); i++)
+	if (UseWeightedAvg)
 	{
-		// We could only average the quaternions. So I will make use of them here		
-		double qAvg[4]={0}, tAvg[3]={0}, R[9]={0}, Pose[16]={0};
-
-		// Perform the final averaging
-		PoseCluster* curCluster = poseClusters[i];
-		vector<PPFPose*> curPoses = curCluster->poseList;
-		const int curSize = curPoses.size();
-
-		for (int j=0; j<curSize; j++)
+#if defined T_OPENMP
+#pragma omp parallel for
+#endif
+		// uses weighting by the number of votes
+		for (int i=0; i<poseClusters.size(); i++)
 		{
-			qAvg[0]+= curPoses[j]->q[0];
-			qAvg[1]+= curPoses[j]->q[1];
-			qAvg[2]+= curPoses[j]->q[2];
-			qAvg[3]+= curPoses[j]->q[3];
+			// We could only average the quaternions. So I will make use of them here		
+			double qAvg[4]={0}, tAvg[3]={0}, R[9]={0}, Pose[16]={0};
 
-			tAvg[0]+= curPoses[j]->t[0];
-			tAvg[1]+= curPoses[j]->t[1];
-			tAvg[2]+= curPoses[j]->t[2];
+			// Perform the final averaging
+			PoseCluster* curCluster = poseClusters[i];
+			vector<PPFPose*> curPoses = curCluster->poseList;
+			const int curSize = curPoses.size();
+			int numTotalVotes = 0;
+
+			for (int j=0; j<curSize; j++)
+				numTotalVotes += curPoses[j]->numVotes;
+
+			double wSum=0;
+
+			for (int j=0; j<curSize; j++)
+			{
+				const double w = (double)curPoses[j]->numVotes / (double)numTotalVotes;
+
+				qAvg[0]+= w*curPoses[j]->q[0];
+				qAvg[1]+= w*curPoses[j]->q[1];
+				qAvg[2]+= w*curPoses[j]->q[2];
+				qAvg[3]+= w*curPoses[j]->q[3];
+
+				tAvg[0]+= w*curPoses[j]->t[0];
+				tAvg[1]+= w*curPoses[j]->t[1];
+				tAvg[2]+= w*curPoses[j]->t[2];
+				wSum+=w;
+			}
+
+			tAvg[0]/=wSum;
+			tAvg[1]/=wSum;
+			tAvg[2]/=wSum;
+
+			qAvg[0]/=wSum;
+			qAvg[1]/=wSum;
+			qAvg[2]/=wSum;
+			qAvg[3]/=wSum;
+
+			curPoses[0]->update_pose_quat(qAvg, tAvg);
+			curPoses[0]->numVotes=curCluster->numVotes;
+
+			//finalPoses.push_back(curPoses[0]);
+			finalPoses[i]=curPoses[0]->clone();
+
+			// we won't need this
+			delete poseClusters[i];
 		}
+	}
+	else
+	{
+#if defined T_OPENMP
+#pragma omp parallel for
+#endif
+		for (int i=0; i<poseClusters.size(); i++)
+		{
+			// We could only average the quaternions. So I will make use of them here		
+			double qAvg[4]={0}, tAvg[3]={0}, R[9]={0}, Pose[16]={0};
 
-		tAvg[0]/=(double)curSize;
-		tAvg[1]/=(double)curSize;
-		tAvg[2]/=(double)curSize;
+			// Perform the final averaging
+			PoseCluster* curCluster = poseClusters[i];
+			vector<PPFPose*> curPoses = curCluster->poseList;
+			const int curSize = curPoses.size();
 
-		qAvg[0]/=(double)curSize;
-		qAvg[1]/=(double)curSize;
-		qAvg[2]/=(double)curSize;
-		qAvg[3]/=(double)curSize;
+			for (int j=0; j<curSize; j++)
+			{
+				qAvg[0]+= curPoses[j]->q[0];
+				qAvg[1]+= curPoses[j]->q[1];
+				qAvg[2]+= curPoses[j]->q[2];
+				qAvg[3]+= curPoses[j]->q[3];
 
-		curPoses[0]->update_pose_quat(qAvg, tAvg);
-		curPoses[0]->numVotes=curCluster->numVotes;
+				tAvg[0]+= curPoses[j]->t[0];
+				tAvg[1]+= curPoses[j]->t[1];
+				tAvg[2]+= curPoses[j]->t[2];
+			}
 
-		//finalPoses.push_back(curPoses[0]);
-		finalPoses[i]=curPoses[0]->clone();
+			tAvg[0]/=(double)curSize;
+			tAvg[1]/=(double)curSize;
+			tAvg[2]/=(double)curSize;
 
-		// we won't need this
-		delete poseClusters[i];
+			qAvg[0]/=(double)curSize;
+			qAvg[1]/=(double)curSize;
+			qAvg[2]/=(double)curSize;
+			qAvg[3]/=(double)curSize;
+
+			curPoses[0]->update_pose_quat(qAvg, tAvg);
+			curPoses[0]->numVotes=curCluster->numVotes;
+
+			//finalPoses.push_back(curPoses[0]);
+			finalPoses[i]=curPoses[0]->clone();
+
+			// we won't need this
+			delete poseClusters[i];
+		}
 	}
 
 	poseClusters.clear();
@@ -701,7 +771,7 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
 	float distanceSampleStep = diameter * sampling_step_relative;
 	//Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, sampling_step_relative);
-	Mat sampled = sample_pc_by_quantization(pc, xRange, yRange, zRange, sampling_step_relative);
+	Mat sampled = sample_pc_by_quantization(pc, xRange, yRange, zRange, sampling_step_relative,1);
 	//Mat sampled = pc.clone();
 
 	//visualize_pc(sampled, 1, 1, 0, "reg");
@@ -899,7 +969,9 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 	double MinMatchScore = 0.5;
 	
 	int numPosesAdded = sampled.rows/sceneSamplingStep;
-	cluster_poses(poseList, numPosesAdded, PositionThreshold, RotationThreshold, MinMatchScore, results);
+
+	// TODO : Try weighting by numVotes
+	cluster_poses(poseList, numPosesAdded, PositionThreshold, RotationThreshold, MinMatchScore, 1, results);
 
 	// free up the used space
 	sampled.release();
@@ -915,6 +987,24 @@ void t_match_pc_ppf(Mat pc, const float SearchRadius, const int SampleStep, cons
 #if !defined (T_OPENMP)
 		free(accumulator);
 #endif
+}
+
+int main_mesh()
+{
+	int useNormals = 1;
+	int withBbox = 1;
+	
+	// model
+	int numVert = 6700;
+	//const char* fn = "../../../data/parasaurolophus_6700.ply";
+	TMesh* mesh = 0;
+	read_mesh_ply(&mesh, "C:/Data/angel_points_meshed.ply");
+	double Pose[16]={0.997621, 0.066989, -0.016266, -121.255793, -0.047424, 0.495682, -0.867208, -610.319320, -0.050030, 0.865917, 0.497680, -324.868454, 0.000000, 0.000000, 0.000000, 1.000000};
+		
+	transform_mesh(mesh, Pose);
+
+	t_write_mesh_ply(mesh , "C:/Data/angle_ppf_mesh.ply");
+	return 0;
 }
 
 // test icp
@@ -947,7 +1037,9 @@ int main_icp_test()
 	compute_normals_pc_3d(scene, scene, 10, 1, vp);
 
 	float Residual=0;
+#if defined (T_OPENMP)
 	omp_set_num_threads(8);
+#endif
 	int64 t1 = cv::getTickCount();
 	t_icp_register(modelT, scene, 0.01, 200, 1, 1, 8, 0, 0, &Residual, Pose); 
 	int64 t2 = cv::getTickCount();
@@ -958,6 +1050,8 @@ int main_icp_test()
 	visualize_registration(modelRegistered, scene, "ICP Registration", 150);
 #endif
 
+	return 0;
+
 }
 
 // real data
@@ -965,6 +1059,7 @@ int main()
 {
 	int useNormals = 1;
 	int withBbox = 1;
+	int numVert ;
 	//int numVert = 16399;
 	//const char* fn = "../../../data/cheff_simple.ply";
 	//int numVert = 135142;
@@ -975,23 +1070,42 @@ int main()
 	//const char* fn = "../../../data/parasaurolophus_6700.ply";
 	//int numVert = 51954;
 	//const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
-	//int numVert = 18367;
+	//numVert = 18367;
 	//const char* fn = "../../../data/SpaceTime/Scena2/scene2-model2_0_ascii.ply";
-	//int numVert = 33560;
+	//numVert = 33560;
 	//const char* fn = "../../../data/rgbd-scenes-v2/model/sofa_3_0_ascii.ply";
-	int numVert = 7940;
-	const char* fn = "../../../data/stereo/im60.ply";
-	
-	//int numVert = 33368;
+	numVert = 11052;
+	const char* fn = "../../../data/rgbd-scenes-v2/model/sofa_small.ply";
+	//numVert = 7610;
+	//const char* fn = "C:/Data/angel42_meshed_small.ply";
+	//const char* fn = "../../../data/stereo/angel4.ply";
+
+	//numVert = 6827;
+	//const char* fn = "../../../data/stereo/bigbird12.ply";
+	//const char* fn = "../../../data/rgbd-scenes-v2/model/sofa_3_0_scaled.ply";
+	//const char* fn = "../../../data/rgbd-scenes-v2/model/chair_10_small.ply";
+	//int numVert = 8676;
+	//const char* fn = "C:/Data/angel_points_meshed_small.ply";
+	//const char* fn = "../../../data/parasaurolophus_low_normals.ply";
+	//const char* fn = "../../../data/parasaurolophus_6700.ply";
+	//const char* fn = "../../../data/chicken3.ply";
+	//const char* fn = "../../../data/chicken_small2.ply";
+	TMesh* mesh = 0;
+	read_mesh_ply(&mesh, fn);
+	Mat pc = Mat(mesh->NumVertices, 6, CV_32F);
+	get_mesh_vertices(mesh, pc.data, pc.step, 1, 1);
+
+	//numVert = 33368;
 	//const char* fn = "../../../data/chicken2.ply";
-	//int numVert = 13550;
+	//numVert = 13550;
 	//const char* fn = "../../../data/chicken3.ply";
 	
-	Mat pc = load_ply_simple(fn, numVert, useNormals);
+	//fn = "../../../data/stereo/im60_mesh.ply";
+	//Mat pc = load_ply_simple(fn, numVert, useNormals);
 	//Mat pc = Mat(100,100,CV_32FC1);
 
-	const char* outputResultFile = "C:/Data/PPFICPOutput.ply";
-	const char* scenePCFile = "C:/Data/PPFICPScene.ply";
+	const char* outputResultFile = "C:/Data/PPFICPOutputSofa.ply";
+	const char* scenePCFile = "C:/Data/PPFICPSceneSofa.ply";
 
 	TPPFModelPC* ppfModel = 0;
 	printf("Training...");
@@ -1008,8 +1122,17 @@ int main()
 	//fn = "../../../data/rgbd-scenes-v2/pc/08_ascii.ply";
 	//numVert = 894220;
 	//fn = "../../../data/lidar/pc/11_ascii.ply";
-	numVert = 49195;
-	fn = "../../../data/stereo/depth12.ply";
+	//numVert = 49106;
+	//fn = "../../../data/stereo/depth12_normals_mesh.ply";
+	numVert = 20510;
+	fn = "../../../data/rgbd-scenes-v2/pc/03_ascii.ply";
+	//numVert = 80499;
+	//fn = "../../../data/rgbd-scenes-v2/pc/10_small_ascii.ply";
+
+	//numVert = 33990;
+	//fn = "../../../data/angel_bird_gnome1.ply";
+	//fn = "c:/data/angle_scene2.ply";
+	
 	
 	//numVert = 113732;
 	////fn = "../../../data/Retrieval/rs22_proc2.ply";
@@ -1031,7 +1154,7 @@ int main()
 	printf("Estimated Poses:\n");
 
 	// debug first five poses
-	for (int i=0; i<MIN(5, results.size()); i++)
+	for (int i=0; i<MIN(10, results.size()); i++)
 	{
 		PPFPose* pose = results[i];
 
@@ -1052,10 +1175,12 @@ int main()
 
 		double PoseICP[16]={0}, PoseFull[16]={0};
 		float Residual=0;
+#if defined (T_OPENMP)
 		omp_set_num_threads(8);
+#endif
 		int64 t1 = cv::getTickCount();
 		//getch();
-		t_icp_register(modelT, pcTest, 0.001, 300, 3, 1, 8, 0, 0, &Residual, PoseICP); 
+		t_icp_register(modelT, pcTest, 0.01, 250, 4, 1, 8, 0, 0, &Residual, PoseICP); 
 
 		matrix_product44(PoseICP, pose->Pose, PoseFull);
 
@@ -1072,13 +1197,18 @@ int main()
 		printf("Pose %d - Elapsed Time: %f\n", i, (double)(t2-t1)/cv::getTickFrequency());
 
 		// Visualize registration
-		Mat pct = transform_pc_pose(pc,PoseFull);
+
+		TMesh* MeshTr = transform_mesh_new(mesh, PoseFull);
+		Mat pct = transform_pc_pose(pc, PoseFull);
+		//write_ply(pct, outputResultFile);
+		t_write_mesh_ply(MeshTr, outputResultFile);
+		write_ply(pcTest, scenePCFile);
+
+		destroy_mesh(&MeshTr);
+
 #if defined (_MSC_VER)
 		visualize_registration(pcTest, pct, "Registration");
-#endif
-
-		write_ply(pct, outputResultFile);
-		write_ply(pcTest, scenePCFile);
+#endif		
 	}
 
 	return 0;

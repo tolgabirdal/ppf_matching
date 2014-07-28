@@ -1040,6 +1040,7 @@ int update_window(TWindowGL* window)
 {
 	int is_processed = 0;
 	MSG msg;
+	int key = -1;
 
 	while(1)										// Loop That Runs While done=FALSE
 	{
@@ -1065,7 +1066,7 @@ int update_window(TWindowGL* window)
 					break;							// ESC Signalled A Quit
 				}
 				else									// Not Time To Quit, Update Screen
-				{					
+				{
 					window->PaintCallback(window->preservedData);
 					//DrawGLScene();						// Draw The Scene
 					SwapBuffers(window->hDC);			// Swap Buffers (Double Buffering)

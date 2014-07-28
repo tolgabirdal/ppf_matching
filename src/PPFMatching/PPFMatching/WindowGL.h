@@ -8,7 +8,7 @@
 #include <gl/gl.h>
 //#include <gl/glaux.h>
 #include <gl/glu.h>
-//#include "TMesh3D.h"
+//#include "TMesh.h"
 
 typedef struct DisplayNode
 {
@@ -127,13 +127,13 @@ extern "C" {
 	void disp_polygon(TWindowGL* window, float* x, float* y, const int length);
 	void disp_arrow(TWindowGL* window, float x1, float y1, float x2, float y2, float size);
 	void disp_image(TWindowGL* window, const int width, const int height, const unsigned char* data);
-	//void disp_mesh(TWindowGL* window, TMesh3D *mesh, int useColors);
+	//void disp_mesh(TWindowGL* window, TMesh *mesh, int useColors);
 	void t_write_string_gl_t(TWindowGL* window, const char* string, const int x, const int y);
 
 	void draw_custom_gl_scene(TWindowGL* window, TGLOpCallback Callback, void* Data);
 	void register_custom_gl_scene(TWindowGL* window, TGLOpCallback Callback, void* Data);
 
-	//void draw_mesh_3D_gl(TMesh3D *mesh, int useColors);
+	//void draw_mesh_3D_gl(TMesh *mesh, int useColors);
 
 	void set_color(TWindowGL* win, unsigned char R, unsigned char G, unsigned char B);
 	void set_color_string(TWindowGL* win, const char* color);

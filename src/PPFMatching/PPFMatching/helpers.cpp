@@ -44,7 +44,13 @@ Mat load_ply_simple(const char* fileName, int numVertices, int withNormals)
 
 	string str;
 	while (str.substr(0, 10) !="end_header")
+	{
+		if ( str.substr(0, 14) == "element vertex" )
+		{
+			
+		}
 		getline(ifs, str);
+	}
 
 	float dummy =  0;
 	for(size_t i = 0; i < numVertices; i++)
@@ -450,7 +456,7 @@ Mat sample_pc_kd_tree(Mat pc, float radius, int numNeighbors)
 // uses a volume instead of an octree
 // TODO: Right now normals are required. 
 // This is much faster than sample_pc_octree
-Mat sample_pc_by_quantization(Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep)
+Mat sample_pc_by_quantization(Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep, int weightByCenter)
 {
 	vector < vector<int> > map;
 
@@ -499,25 +505,74 @@ Mat sample_pc_by_quantization(Mat pc, float xrange[2], float yrange[2], float zr
 		const int cn = curCell.size();
 		if (cn>0)
 		{
-			for (int j=0; j<cn; j++)
+			if (weightByCenter)
 			{
-				const int ptInd = curCell[j];
-				float* point = (float*)(&pc.data[ptInd * pc.step]);
+				int xCell, yCell, zCell;
+				double xc, yc, zc;
+				double weightSum = 0 ;
+				zCell = i % numSamplesDim;
+				yCell = ((i-zCell)/numSamplesDim) % numSamplesDim;
+				xCell = ((i-zCell-yCell*numSamplesDim)/(numSamplesDim*numSamplesDim));
 
-				px += (double)point[0];
-				py += (double)point[1];
-				pz += (double)point[2];
-				nx += (double)point[3];
-				ny += (double)point[4];
-				nz += (double)point[5];
-			}						
+				xc = ((double)xCell+0.5) * (double)xr/numSamplesDim + (double)xrange[0];
+				yc = ((double)yCell+0.5) * (double)yr/numSamplesDim + (double)yrange[0];
+				zc = ((double)zCell+0.5) * (double)zr/numSamplesDim + (double)zrange[0];
 
-			px/=(double)cn;
-			py/=(double)cn;
-			pz/=(double)cn;
-			nx/=(double)cn;
-			ny/=(double)cn;
-			nz/=(double)cn;
+				for (int j=0; j<cn; j++)
+				{
+					const int ptInd = curCell[j];
+					float* point = (float*)(&pc.data[ptInd * pc.step]);
+					const double dx = point[0]-xc;
+					const double dy = point[1]-yc;
+					const double dz = point[2]-zc;
+					const double d = sqrt(dx*dx+dy*dy+dz*dz);
+					double w = 0;
+					// exp( - (distance/h)**2 )
+					//const double w = exp(-d*d);
+
+					if (d>EPS)
+						w = 1.0/d;
+
+					//float weights[3]={1,1,1};
+					px += w*(double)point[0];
+					py += w*(double)point[1];
+					pz += w*(double)point[2];
+					nx += w*(double)point[3];
+					ny += w*(double)point[4];
+					nz += w*(double)point[5];
+
+					weightSum+=w;
+				}
+				px/=(double)weightSum;
+				py/=(double)weightSum;
+				pz/=(double)weightSum;
+				nx/=(double)weightSum;
+				ny/=(double)weightSum;
+				nz/=(double)weightSum;
+			}
+			else
+			{
+				for (int j=0; j<cn; j++)
+				{
+					const int ptInd = curCell[j];
+					float* point = (float*)(&pc.data[ptInd * pc.step]);
+
+					px += (double)point[0];
+					py += (double)point[1];
+					pz += (double)point[2];
+					nx += (double)point[3];
+					ny += (double)point[4];
+					nz += (double)point[5];
+				}						
+
+				px/=(double)cn;
+				py/=(double)cn;
+				pz/=(double)cn;
+				nx/=(double)cn;
+				ny/=(double)cn;
+				nz/=(double)cn;
+
+			}
 
 			float *pcData = (float*)(&pcSampled.data[c*pcSampled.step[0]]);
 			pcData[0]=(float)px;
@@ -1106,26 +1161,6 @@ void mean_cov_local_pc_ind(const float* pc, const int* Indices, const int ws, co
 
 }
 
-void flip_normal_viewpoint(const float* point, double vp_x, double vp_y, double vp_z, double *nx, double *ny, double *nz)
-{
-	double cos_theta;
-
-	// See if we need to flip any plane normals
-	vp_x -= (double)point[0];
-	vp_y -= (double)point[1];
-	vp_z -= (double)point[2];
-
-	// Dot product between the (viewpoint - point) and the plane normal
-	cos_theta = (vp_x * (*nx) + vp_y * (*ny) + vp_z * (*nz));
-
-	// Flip the plane normal
-	if (cos_theta < 0)
-	{
-		(*nx) *= -1;
-		(*ny) *= -1;
-		(*nz) *= -1;
-	}
-}
 
 int compute_normals_pc_3d(const Mat PC, Mat& PCNormals, const int NumNeighbors, const bool FlipViewpoint, const double viewpoint[3])
 {

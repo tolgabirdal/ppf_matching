@@ -563,10 +563,10 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 			i++;
 
 			// visualize on demand
-/*#if defined (_MSC_VER)
+#if defined (_MSC_VER)
 			Src_Moved = transform_pc_pose(SrcPC, PoseX);
-			visualize_registration(Src_Moved, DstPC0, "Registration", 150);
-#endif*/
+			visualize_registration(DstPC0, Src_Moved, "Registration", 150);
+#endif
 		}
 
 		double TempPose[16];

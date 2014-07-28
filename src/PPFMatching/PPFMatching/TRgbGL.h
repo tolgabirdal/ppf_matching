@@ -10,7 +10,7 @@ typedef struct TColorGL {
 	float blue;
 } TColorGL;
 
-//const TInt RGBSIZE = 656;
+//const int RGBSIZE = 656;
 #define RGBSIZE 656
 
 #define COLORaliceBlue           {0.94118f,0.97255f,1.00000f}

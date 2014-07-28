@@ -123,7 +123,7 @@ int display(void* UserData)
 		glDisable(GL_LIGHT0);
 		glDisable(GL_LIGHT1);
 		glDisable(GL_LIGHTING);
-		glColor4f(0,1,0,1);		
+		glColor4f(0,0.9,0.1,0.75);		
 		
 		glBegin(GL_LINES);
 
@@ -235,7 +235,7 @@ int display_registration(void* UserData)
 	glDisable(GL_LIGHT1);*/
 	glDisable(GL_LIGHTING);
 
-	glColor4f(1,0,0,1);
+	glColor4f(0.65,0.65,0.65,0.65);
 
 	glBegin(GL_POINTS);
 	for (int i=0; i!=pc.rows; i++)
@@ -246,7 +246,7 @@ int display_registration(void* UserData)
 	}
 	glEnd();
 
-	glColor4f(0,1,0,1);
+	glColor4f(0,0.8,0.2,0.45);
 	glBegin(GL_POINTS);
 	for (int i=0; i!=pc2.rows; i++)
 	{

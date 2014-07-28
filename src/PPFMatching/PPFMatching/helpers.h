@@ -22,7 +22,7 @@ extern "C" {
 	cv::Mat sample_pc_perfect_uniform(cv::Mat PC, int sampleStep);
 	cv::Mat sample_pc_random(cv::Mat PC, int numPoints);
 	cv::Mat sample_pc_octree(cv::Mat pc, float xrange[2], float yrange[2], float zrange[2], float resolution);
-	cv::Mat sample_pc_by_quantization(cv::Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep);
+	cv::Mat sample_pc_by_quantization(cv::Mat pc, float xrange[2], float yrange[2], float zrange[2], float sample_step_relative, int weightByCenter=0);
 	cv::Mat sample_pc_kd_tree(cv::Mat pc, float radius, int numNeighbors);
 
 	void compute_bbox_std(cv::Mat pc, float xRange[2], float yRange[2], float zRange[2]);

@@ -7,7 +7,7 @@
 
 #define EPS		1.192092896e-07F        /* smallest such that 1.0+FLT_EPSILON != 1.0 */
 
-#define T_OPENMP // define this if OpenMP is desired
+//#define T_OPENMP // define this if OpenMP is desired
 
 #ifndef PI
 #ifdef  M_PI
@@ -21,6 +21,14 @@
 
 #ifndef M_PI
 #define M_PI             PI
+#endif
+
+#ifndef MIN
+#define MIN(a,b)  ((a) > (b) ? (b) : (a))
+#endif
+
+#ifndef MAX
+#define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #endif
 
 // Useful Macros
@@ -352,6 +360,48 @@ extern "C" {
 		t[0] = row1[0] * (-p1[0]) + row1[1] * (-p1[1]) + row1[2] * (-p1[2]);
 		t[1] = row2[0] * (-p1[0]) + row2[1] * (-p1[1]) + row2[2] * (-p1[2]);
 		t[2] = row3[0] * (-p1[0]) + row3[1] * (-p1[1]) + row3[2] * (-p1[2]);
+	}
+
+	static __inline void flip_normal_viewpoint(const float* point, double vp_x, double vp_y, double vp_z, double *nx, double *ny, double *nz)
+	{
+		double cos_theta;
+
+		// See if we need to flip any plane normals
+		vp_x -= (double)point[0];
+		vp_y -= (double)point[1];
+		vp_z -= (double)point[2];
+
+		// Dot product between the (viewpoint - point) and the plane normal
+		cos_theta = (vp_x * (*nx) + vp_y * (*ny) + vp_z * (*nz));
+
+		// Flip the plane normal
+		if (cos_theta < 0)
+		{
+			(*nx) *= -1;
+			(*ny) *= -1;
+			(*nz) *= -1;
+		}
+	}
+
+	static __inline void flip_normal_viewpoint_32f(const float* point, float vp_x, float vp_y, float vp_z, float *nx, float *ny, float *nz)
+	{
+		float cos_theta;
+
+		// See if we need to flip any plane normals
+		vp_x -= (float)point[0];
+		vp_y -= (float)point[1];
+		vp_z -= (float)point[2];
+
+		// Dot product between the (viewpoint - point) and the plane normal
+		cos_theta = (vp_x * (*nx) + vp_y * (*ny) + vp_z * (*nz));
+
+		// Flip the plane normal
+		if (cos_theta < 0)
+		{
+			(*nx) *= -1;
+			(*ny) *= -1;
+			(*nz) *= -1;
+		}
 	}
 
 

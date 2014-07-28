@@ -83,7 +83,7 @@ unsigned int hashtable_int_insert(hashtable_int *hashtbl, KeyType key, void *dat
 	size_t hash=hashtbl->hashfunc(key)%hashtbl->size;
 
 
-/*	fpruintf(stderr, "hashtbl_insert() key=%s, hash=%d, data=%s\n", key, hash, (TChar*)data);*/
+/*	fpruintf(stderr, "hashtbl_insert() key=%s, hash=%d, data=%s\n", key, hash, (char*)data);*/
 
 	node=hashtbl->nodes[hash];
 	while(node) {
@@ -112,7 +112,7 @@ unsigned int hashtable_int_insert_hashed(hashtable_int *hashtbl, KeyType key, vo
 	size_t hash = key % hashtbl->size;
 
 
-/*	fpruintf(stderr, "hashtbl_insert() key=%s, hash=%d, data=%s\n", key, hash, (TChar*)data);*/
+/*	fpruintf(stderr, "hashtbl_insert() key=%s, hash=%d, data=%s\n", key, hash, (char*)data);*/
 
 	node=hashtbl->nodes[hash];
 	while(node) {
