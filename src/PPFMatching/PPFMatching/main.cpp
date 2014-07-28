@@ -1074,8 +1074,8 @@ int main()
 	//const char* fn = "../../../data/SpaceTime/Scena2/scene2-model2_0_ascii.ply";
 	//numVert = 33560;
 	//const char* fn = "../../../data/rgbd-scenes-v2/model/sofa_3_0_ascii.ply";
-	numVert = 11052;
-	const char* fn = "../../../data/rgbd-scenes-v2/model/sofa_small.ply";
+	//numVert = 11052;
+	//const char* fn = "../../../data/rgbd-scenes-v2/model/sofa_small.ply";
 	//numVert = 7610;
 	//const char* fn = "C:/Data/angel42_meshed_small.ply";
 	//const char* fn = "../../../data/stereo/angel4.ply";
@@ -1083,7 +1083,7 @@ int main()
 	//numVert = 6827;
 	//const char* fn = "../../../data/stereo/bigbird12.ply";
 	//const char* fn = "../../../data/rgbd-scenes-v2/model/sofa_3_0_scaled.ply";
-	//const char* fn = "../../../data/rgbd-scenes-v2/model/chair_10_small.ply";
+	const char* fn = "../../../data/rgbd-scenes-v2/model/chair_10_small.ply";
 	//int numVert = 8676;
 	//const char* fn = "C:/Data/angel_points_meshed_small.ply";
 	//const char* fn = "../../../data/parasaurolophus_low_normals.ply";
@@ -1104,12 +1104,12 @@ int main()
 	//Mat pc = load_ply_simple(fn, numVert, useNormals);
 	//Mat pc = Mat(100,100,CV_32FC1);
 
-	const char* outputResultFile = "C:/Data/PPFICPOutputSofa.ply";
-	const char* scenePCFile = "C:/Data/PPFICPSceneSofa.ply";
+	const char* outputResultFile = "../../../PPFICPOutput.ply";
+	const char* scenePCFile = "../../../PPFICPScene.ply";
 
 	TPPFModelPC* ppfModel = 0;
 	printf("Training...");
-	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.05, 30, &ppfModel);
+	Mat PPFMAt = train_pc_ppf(pc, 0.025, 0.025, 30, &ppfModel);
 	printf("\nTraining complete. Loading model...");
 
 	//numVert = 122503;
@@ -1124,10 +1124,10 @@ int main()
 	//fn = "../../../data/lidar/pc/11_ascii.ply";
 	//numVert = 49106;
 	//fn = "../../../data/stereo/depth12_normals_mesh.ply";
-	numVert = 20510;
-	fn = "../../../data/rgbd-scenes-v2/pc/03_ascii.ply";
-	//numVert = 80499;
-	//fn = "../../../data/rgbd-scenes-v2/pc/10_small_ascii.ply";
+	//numVert = 20510;
+	//fn = "../../../data/rgbd-scenes-v2/pc/03_ascii.ply";
+	numVert = 80499;
+	fn = "../../../data/rgbd-scenes-v2/pc/10_small_ascii.ply";
 
 	//numVert = 33990;
 	//fn = "../../../data/angel_bird_gnome1.ply";
@@ -1147,7 +1147,7 @@ int main()
 
 	int64 tick1 = cv::getTickCount();
 	vector < PPFPose* > results;
-	t_match_pc_ppf(pcTest, 15, 5, 0.05, ppfModel, results);
+	t_match_pc_ppf(pcTest, 15, 5, 0.025, ppfModel, results);
 	int64 tick2 = cv::getTickCount();
 	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 

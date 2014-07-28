@@ -564,8 +564,8 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 
 			// visualize on demand
 #if defined (_MSC_VER)
-			Src_Moved = transform_pc_pose(SrcPC, PoseX);
-			visualize_registration(DstPC0, Src_Moved, "Registration", 150);
+			//Src_Moved = transform_pc_pose(SrcPC, PoseX);
+			//visualize_registration(DstPC0, Src_Moved, "Registration", 150);
 #endif
 		}
 
