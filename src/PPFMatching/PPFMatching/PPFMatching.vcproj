@@ -207,10 +207,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\gdiam.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\gl_utils.cpp"
 				>
 			</File>
@@ -294,10 +290,6 @@
 			</File>
 			<File
 				RelativePath=".\fasthash.h"
-				>
-			</File>
-			<File
-				RelativePath=".\gdiam.hpp"
 				>
 			</File>
 			<File

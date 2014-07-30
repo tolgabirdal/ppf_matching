@@ -26,7 +26,7 @@ extern "C" {
 	cv::Mat sample_pc_kd_tree(cv::Mat pc, float radius, int numNeighbors);
 
 	void compute_bbox_std(cv::Mat pc, float xRange[2], float yRange[2], float zRange[2]);
-	double compute_diameter(cv::Mat pc);
+	//double compute_diameter(cv::Mat pc);
 	//void compute_obb(cv::Mat pc, float xRange[2], float yRange[2], float zRange[2]);
 	
 	TOctreeNode* Mat2Octree(cv::Mat pc);

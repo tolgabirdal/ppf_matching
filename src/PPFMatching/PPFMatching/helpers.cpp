@@ -1,7 +1,7 @@
 
 #include "helpers.h"
 #include "c_utils.h"
-#include "gdiam.hpp"
+//#include "gdiam.hpp"
 #include <time.h>
 #include <fstream>
 #include <vector>
@@ -780,9 +780,40 @@ void compute_bbox_std(Mat pc, float xRange[2], float yRange[2], float zRange[2])
 {
 	Mat pcPts = pc.colRange(0, 3);
 	int num = pcPts.rows;
-
+	
 	float* points = (float*)pcPts.data;
-    GPointPair   pair;
+
+	xRange[0] = points[0];
+	xRange[1] = points[0];
+	yRange[0] = points[1];
+	yRange[1] = points[1];
+	zRange[0] = points[2];
+	zRange[1] = points[2];
+	
+    for  ( int  ind = 0; ind < num; ind++ )
+	{
+		const float* row = (float*)(pcPts.data + (ind * pcPts.step));
+		const float x = row[0];
+		const float y = row[1];
+		const float z = row[2];
+
+		if (x<xRange[0])
+			xRange[0]=x;
+		if (x>xRange[1])
+			xRange[1]=x;
+
+		if (y<yRange[0])
+			yRange[0]=y;
+		if (y>yRange[1])
+			yRange[1]=y;
+
+		if (z<zRange[0])
+			zRange[0]=z;
+		if (z>zRange[1])
+			zRange[1]=z;
+	}
+
+ /*   GPointPair   pair;
 
     //printf( "Axis parallel bounding box\n" );
     GBBox   bbx;
@@ -797,11 +828,11 @@ void compute_bbox_std(Mat pc, float xRange[2], float yRange[2], float zRange[2])
 
 	xRange[1]=bbx.max_coord(0);
 	yRange[1]=bbx.max_coord(1);
-	zRange[1]=bbx.max_coord(2);
+	zRange[1]=bbx.max_coord(2);*/
 }
 
 // compute the oriented bounding box
-double compute_diameter(Mat pc)
+/*double compute_diameter(Mat pc)
 {
 	Mat pcPts = pc.colRange(0, 3);
 	int num = pcPts.rows;
@@ -827,7 +858,7 @@ double compute_diameter(Mat pc)
 	free(gPoints);
 	
 	return pair.distance;
-}
+}*/
 /*
 void compute_obb(Mat pc, float xRange[2], float yRange[2], float zRange[2])
 {

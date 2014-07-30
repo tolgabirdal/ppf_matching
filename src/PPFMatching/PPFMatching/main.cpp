@@ -1068,8 +1068,8 @@ int main()
 	//const char* fn = "../../../data/parasaurolophus_low_normals2.ply";
 	//int numVert = 6700;
 	//const char* fn = "../../../data/parasaurolophus_6700.ply";
-	//int numVert = 51954;
-	//const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
+	numVert = 51954;
+	const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
 	//numVert = 18367;
 	//const char* fn = "../../../data/SpaceTime/Scena2/scene2-model2_0_ascii.ply";
 	//numVert = 33560;
@@ -1083,7 +1083,7 @@ int main()
 	//numVert = 6827;
 	//const char* fn = "../../../data/stereo/bigbird12.ply";
 	//const char* fn = "../../../data/rgbd-scenes-v2/model/sofa_3_0_scaled.ply";
-	const char* fn = "../../../data/rgbd-scenes-v2/model/chair_10_small.ply";
+	//const char* fn = "../../../data/rgbd-scenes-v2/model/chair_10_small.ply";
 	//int numVert = 8676;
 	//const char* fn = "C:/Data/angel_points_meshed_small.ply";
 	//const char* fn = "../../../data/parasaurolophus_low_normals.ply";
@@ -1104,16 +1104,16 @@ int main()
 	//Mat pc = load_ply_simple(fn, numVert, useNormals);
 	//Mat pc = Mat(100,100,CV_32FC1);
 
-	const char* outputResultFile = "../../../PPFICPOutput.ply";
-	const char* scenePCFile = "../../../PPFICPScene.ply";
+	const char* outputResultFile = "../../../data/out/PPFICPOutputMario.ply";
+	const char* scenePCFile = "../../../data/out/PPFICPSceneMario.ply";
 
 	TPPFModelPC* ppfModel = 0;
 	printf("Training...");
 	Mat PPFMAt = train_pc_ppf(pc, 0.025, 0.025, 30, &ppfModel);
 	printf("\nTraining complete. Loading model...");
 
-	//numVert = 122503;
-	//fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
+	numVert = 122503;
+	fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
 	//numVert = 131834;
 	//fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
 	//numVert = 120366;
@@ -1126,8 +1126,8 @@ int main()
 	//fn = "../../../data/stereo/depth12_normals_mesh.ply";
 	//numVert = 20510;
 	//fn = "../../../data/rgbd-scenes-v2/pc/03_ascii.ply";
-	numVert = 80499;
-	fn = "../../../data/rgbd-scenes-v2/pc/10_small_ascii.ply";
+	//numVert = 80499;
+	//fn = "../../../data/rgbd-scenes-v2/pc/10_small_ascii.ply";
 
 	//numVert = 33990;
 	//fn = "../../../data/angel_bird_gnome1.ply";
