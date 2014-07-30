@@ -1068,8 +1068,8 @@ int main()
 	//const char* fn = "../../../data/parasaurolophus_low_normals2.ply";
 	//int numVert = 6700;
 	//const char* fn = "../../../data/parasaurolophus_6700.ply";
-	numVert = 51954;
-	const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
+	//numVert = 51954;
+	//const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
 	//numVert = 18367;
 	//const char* fn = "../../../data/SpaceTime/Scena2/scene2-model2_0_ascii.ply";
 	//numVert = 33560;
@@ -1090,6 +1090,10 @@ int main()
 	//const char* fn = "../../../data/parasaurolophus_6700.ply";
 	//const char* fn = "../../../data/chicken3.ply";
 	//const char* fn = "../../../data/chicken_small2.ply";
+
+	numVert = 26404;
+	const char* fn = "../../../data/kinect/model/Frog_ascii.ply";
+
 	TMesh* mesh = 0;
 	read_mesh_ply(&mesh, fn);
 	Mat pc = Mat(mesh->NumVertices, 6, CV_32F);
@@ -1104,16 +1108,19 @@ int main()
 	//Mat pc = load_ply_simple(fn, numVert, useNormals);
 	//Mat pc = Mat(100,100,CV_32FC1);
 
-	const char* outputResultFile = "../../../data/out/PPFICPOutputMario.ply";
-	const char* scenePCFile = "../../../data/out/PPFICPSceneMario.ply";
+	const char* outputResultFile = "../../../data/out/PPFICPOutputFrog.ply";
+	const char* scenePCFile = "../../../data/out/PPFICPSceneFrog.ply";
 
 	TPPFModelPC* ppfModel = 0;
 	printf("Training...");
-	Mat PPFMAt = train_pc_ppf(pc, 0.025, 0.025, 30, &ppfModel);
+	Mat PPFMAt = train_pc_ppf(pc, 0.1, 0.025, 30, &ppfModel);
 	printf("\nTraining complete. Loading model...");
 
-	numVert = 122503;
-	fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
+	numVert = 265695;
+	fn = "../../../data/kinect/scene/frog_scene_3_ascii.ply";
+
+	//numVert = 122503;
+	//fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
 	//numVert = 131834;
 	//fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
 	//numVert = 120366;
@@ -1147,7 +1154,7 @@ int main()
 
 	int64 tick1 = cv::getTickCount();
 	vector < PPFPose* > results;
-	t_match_pc_ppf(pcTest, 15, 5, 0.025, ppfModel, results);
+	t_match_pc_ppf(pcTest, 15, 10, 0.025, ppfModel, results);
 	int64 tick2 = cv::getTickCount();
 	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
