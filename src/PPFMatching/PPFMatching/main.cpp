@@ -1091,8 +1091,8 @@ int main()
 	//const char* fn = "../../../data/chicken3.ply";
 	//const char* fn = "../../../data/chicken_small2.ply";
 
-	numVert = 26404;
-	const char* fn = "../../../data/kinect/model/Frog_ascii.ply";
+	numVert = 24819;
+	const char* fn = "../../../data/kinect/model/Frog_ascii2.ply";
 
 	TMesh* mesh = 0;
 	read_mesh_ply(&mesh, fn);
@@ -1113,11 +1113,11 @@ int main()
 
 	TPPFModelPC* ppfModel = 0;
 	printf("Training...");
-	Mat PPFMAt = train_pc_ppf(pc, 0.1, 0.025, 30, &ppfModel);
+	Mat PPFMAt = train_pc_ppf(pc, 0.02, 0.02, 60, &ppfModel);
 	printf("\nTraining complete. Loading model...");
 
-	numVert = 265695;
-	fn = "../../../data/kinect/scene/frog_scene_3_ascii.ply";
+	numVert = 264310;
+	fn = "../../../data/kinect/scene/frog_scene_5_ascii.ply";
 
 	//numVert = 122503;
 	//fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
@@ -1154,7 +1154,7 @@ int main()
 
 	int64 tick1 = cv::getTickCount();
 	vector < PPFPose* > results;
-	t_match_pc_ppf(pcTest, 15, 10, 0.025, ppfModel, results);
+	t_match_pc_ppf(pcTest, 15, 5, 0.02, ppfModel, results);
 	int64 tick2 = cv::getTickCount();
 	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
