@@ -1,4 +1,6 @@
 
+// Author: Tolga Birdal
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <math.h>
@@ -6,8 +8,6 @@
 #include "c_utils.h"
 #include "t_icp.h"
 #include "THashInt.h"
-#include "fasthash.h"
-
 #include "visualize_win.h"
 
 using namespace std;
@@ -197,55 +197,8 @@ void minimize_point_to_plane_metric(Mat Src, Mat Dst, Mat& X)
 		aRow[5] = normals[2];
 	}
 
-	/*printf("\n\n");
-	print(A);
-	printf("\n\n");
-	print(b);
-	printf("\n\n");*/
-	//cv::solve(A, b, X, DECOMP_QR);
 	cv::solve(A, b, X, DECOMP_SVD);
 }
-
-/*
-void get_transform_mat(Mat X, Mat& Pose)
-{
-	Mat DCM;
-	double *r1, *r2, *r3;
-	double* x = (double*)X.data;
-	
-	const double sx = sin(x[0]);
-	const double cx = cos(x[0]);
-	const double sy = sin(x[1]);
-	const double cy = cos(x[1]);
-	const double sz = sin(x[2]);
-	const double cz = cos(x[2]);
-
-	Mat R1 = Mat::eye(3,3, CV_64F);
-	Mat R2 = Mat::eye(3,3, CV_64F);
-	Mat R3 = Mat::eye(3,3, CV_64F);
-
-	r1= (double*)R1.data;
-	r2= (double*)R2.data;
-	r3= (double*)R3.data;
-
-	r1[4]= cx; r1[5]= -sx;
-	r1[7]= sx; r1[8]= cx;
-
-	r2[0]= cy; r2[2]= sy;
-	r2[6]= -sy; r2[8]= cy;
-
-	r3[0]= cz; r3[1]= -sz;
-	r3[3]= sz; r3[4]= cz;
-
-	DCM = (R1*R2)*R3;
-
-	Pose(cv::Range(0, 3), cv::Range(0, 3)) = DCM;
-	double* poseT = (double*)Pose.data;
-	poseT[3]=x[3];
-	poseT[7]=x[4];
-	poseT[11]=x[5];
-	//poseT[15]=1;
-}*/
 
 
 void get_transform_mat(Mat X, double Pose[16])
@@ -279,9 +232,7 @@ void get_transform_mat(Mat X, double Pose[16])
 	r3[3]= sz; r3[4]= cz;
 
 	DCM = R1*(R2*R3);
-	//print(DCM);
-
-	//Pose(cv::Range(0, 3), cv::Range(0, 3)) = DCM;
+	
 	Pose[0] = DCM.at<double>(0,0);
 	Pose[1] = DCM.at<double>(0,1);
 	Pose[2] = DCM.at<double>(0,2);
@@ -296,24 +247,6 @@ void get_transform_mat(Mat X, double Pose[16])
 	Pose[11]=x[5];
 	Pose[15]=1;
 }
-
-/*
-void move_points(Mat Src, Mat M, Mat& SrcMoved)
-{
-	Mat temp = Src.colRange(0,3);
-	convertPointsToHomogeneous(temp, SrcMoved);
-	SrcMoved = M * SrcMoved;
-	convertPointsFromHomogeneous(SrcMoved, SrcMoved);
-}
-
-void move_points(Mat Src, double Pose[16], Mat &SrcMoved)
-{
-	Mat M = Mat(4, 4, CV_64F, Pose);
-	convertPointsToHomogeneous(Src, SrcMoved);
-	SrcMoved = M * SrcMoved;
-	convertPointsFromHomogeneous(SrcMoved, SrcMoved);
-}*/
-
 
 /* Fast way to look up the duplicates
    duplicates is pre-allocated
@@ -348,22 +281,15 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 	double meanAvg[3]={0.5*(meanSrc[0]+meanDst[0]), 0.5*(meanSrc[1]+meanDst[1]), 0.5*(meanSrc[2]+meanDst[2])};
 	subtract_columns(SrcTemp, meanAvg);
 	subtract_columns(DstTemp, meanAvg);
-	//subtract_mean_from_columns(SrcTemp, meanSrc);
-	//subtract_mean_from_columns(DstTemp, meanDst);
 
 	double distSrc = compute_dist_to_origin(SrcTemp);
 	double distDst = compute_dist_to_origin(DstTemp);
 
 	double scale = (double)n / ((distSrc + distDst)*0.5);
 
-	//SrcTemp=SrcPC.clone();
-	//DstTemp=DstPC.clone();
 	SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) = (SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) )  * scale;
 	DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) = (DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) )  * scale;
-	//DstTemp = DstPC * scale;
 
-	//Mat SrcPC0 = SrcTemp.clone();
-	//Mat DstPC0 = DstTemp.clone();
 	Mat SrcPC0 = SrcTemp;
 	Mat DstPC0 = DstTemp;
 	
@@ -371,13 +297,8 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 	matrix_ident(4, Pose);
 
 	void* flann = index_pc_flann(DstPC0);
-	//Mat DstPts = DstPC0(cv::Range(0, DstPC0.rows), cv::Range(0,3));
-	//cv::KDTree searchTree(DstPts, false);
-	//searchTree.build(DstPts, false);
-
 	Mat M = Mat::eye(4,4,CV_64F);
 	
-
 	// walk the pyramid
 	for (int level = NumLevels-1; level >=0; level--)
 	{
@@ -398,6 +319,7 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 		std::vector<int> srcSampleInd;
 
 		/*
+			Note by Tolga Birdal
 			Downsample the model point clouds. If more optimization is required,
 			one could also downsample the scene points, but I think this might 
 			decrease the accuracy. That's why I won't be implementing it at this
@@ -437,8 +359,6 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 			int selInd = 0, di=0;
 			
 			query_pc_flann(flann, Src_Moved, Indices, Distances);
-			//cv::sqrt(Distances, Distances);
-			//searchTree.findNearest(Src_Moved, 1, INT_MAX, Indices, cv::noArray(), Distances);
 
 			for (di=0; di<numElSrc; di++)
 			{
@@ -472,27 +392,20 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 
 			hashtable_int* duplicateTable = get_hashtable(newJ, numElSrc, DstPC0.rows);
 
-			for(di=0; di<duplicateTable->size; di++) 
-			{
+			for(di=0; di<duplicateTable->size; di++) {
 				hashnode_i *node = duplicateTable->nodes[di];
 
-				if (node)
-				{
+				if (node) {
 					// select the first node
 					int idx = (int)node->data-1, dn=0;
 					int dup = (int)node->key-1;
 					int minIdxD = idx;
 					float minDist = distances[idx];
 
-					// iterate to the next
-					//node = node->next;
-
-					while( node ) 
-					{
+					while( node ) {
 						idx = (int)node->data-1;
 
-						if (distances[idx] < minDist)
-						{
+						if (distances[idx] < minDist) {
 							minDist = distances[idx];
 							minIdxD = idx;
 						}
@@ -533,17 +446,11 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 				}			
 
 				Mat X;
-				//print(Src_Match);
-				//print(Dst_Match);
 				minimize_point_to_plane_metric(Src_Match, Dst_Match, X);
-				//print(X);
-				//get_transform_mat(X, M);
-
+				
 				get_transform_mat(X, PoseX);
-
 				Src_Moved = transform_pc_pose(SrcPC, PoseX);
 
-				//double fval = cv::norm(Src_Moved, SrcPC)/(double)(Src_Moved.rows);
 				double fval = cv::norm(Src_Match, Dst_Match)/(double)(Src_Moved.rows);
 
 				// Calculate change in error between itterations

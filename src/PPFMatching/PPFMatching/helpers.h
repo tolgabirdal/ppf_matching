@@ -4,7 +4,7 @@
 
 #include <opencv2/core/core.hpp>
 //#include <opencv2/flann/flann.hpp>
-#include "t_octree.h"
+//#include "t_octree.h"
 
 //using namespace cv;
 
@@ -29,7 +29,7 @@ extern "C" {
 	//double compute_diameter(cv::Mat pc);
 	//void compute_obb(cv::Mat pc, float xRange[2], float yRange[2], float zRange[2]);
 	
-	TOctreeNode* Mat2Octree(cv::Mat pc);
+	//TOctreeNode* Mat2Octree(cv::Mat pc);
 	void* index_pc_flann(cv::Mat pc);
 	void destroy_flann(void* flannIndex);
 	void query_pc_flann(void* flannIndex, cv::Mat PC, cv::Mat& Indices, cv::Mat& Distances);

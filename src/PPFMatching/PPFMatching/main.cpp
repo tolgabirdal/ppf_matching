@@ -14,14 +14,14 @@
 #include "helpers.h"
 #include "c_utils.h"
 #include "hash_murmur.h"
-#include "fasthash.h"
+//#include "fasthash.h"
 #include "t_icp.h"
 #include "tmesh.h"
 
 using namespace std;
 using namespace cv;
 
-#define USE_TOMMY_HASHTABLE
+//#define USE_TOMMY_HASHTABLE
 
 #if defined( USE_TOMMY_HASHTABLE )
 #include <tommy.h>
@@ -353,7 +353,7 @@ int hash_ppf_simple(const double f[4], const double AngleStep, const double Dist
 	
 	//return (d1 | (d2<<8) | (d3<<16) | (d4<<24));
     int hashKey = (d1 | (d2<<8) | (d3<<16) | (d4<<24));
-	hashKey = fasthash32(&hashKey, sizeof(int), 0xAF841C);
+//	hashKey = fasthash32(&hashKey, sizeof(int), 0xAF841C);
 	return hashKey;
 }
 
@@ -366,8 +366,8 @@ int hash_ppf(const double f[4], const double AngleStep, const double DistanceSte
 	const int d4 = (int) (floor ((double)f[3] / (double)DistanceStep));
 	int key[4]={d1,d2,d3,d4};
 	int hashKey=0;
-	//MurmurHash3_x86_32(key, 4*sizeof(int), 42, &hashKey);
-    hashKey = fasthash32(key, 4*sizeof(int), 0xAF841C);
+	MurmurHash3_x86_32(key, 4*sizeof(int), 42, &hashKey);
+    //hashKey = fasthash32(key, 4*sizeof(int), 0xAF841C);
 	
 	return hashKey;
 }
@@ -497,7 +497,9 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 	// pre-allocate the hash nodes
 	THash* hashNodes = (THash*)calloc(numRefPoints*numRefPoints, sizeof(THash));
 
+#if defined T_OPENMP
 	//#pragma omp parallel for
+#endif
 	for (int i=0; i<numRefPoints; i++)
 	{
 		float* f1 = (float*)(&sampled.data[i * sampledStep]);
@@ -535,6 +537,7 @@ Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double
 #pragma omp critical
 				tommy_hashtable_insert(hashTable, &hashNode->node, hashNode, tommy_inthash_u32(hashValue));
 #else
+//#pragma omp critical
 				hashtable_int_insert_hashed(hashTable, hashValue, (void*)hashNode);
 #endif
 
@@ -1113,8 +1116,10 @@ int main()
 
 	TPPFModelPC* ppfModel = 0;
 	printf("Training...");
-	Mat PPFMAt = train_pc_ppf(pc, 0.02, 0.02, 60, &ppfModel);
-	printf("\nTraining complete. Loading model...");
+	int64 tick1 = cv::getTickCount();
+	Mat PPFMAt = train_pc_ppf(pc, 0.05, 0.03, 30, &ppfModel);
+	int64 tick2 = cv::getTickCount();
+	printf("\nTraining complete in %f ms. Loading model...", (double)(tick2-tick1)/ cv::getTickFrequency());
 
 	numVert = 264310;
 	fn = "../../../data/kinect/scene/frog_scene_5_ascii.ply";
@@ -1152,11 +1157,11 @@ int main()
 	Mat pcTest = load_ply_simple(fn, numVert, useNormals);
 	printf("\nStarting matching...");
 
-	int64 tick1 = cv::getTickCount();
+	tick1 = cv::getTickCount();
 	vector < PPFPose* > results;
-	t_match_pc_ppf(pcTest, 15, 5, 0.02, ppfModel, results);
-	int64 tick2 = cv::getTickCount();
-	printf("Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
+	t_match_pc_ppf(pcTest, 15, 5, 0.03, ppfModel, results);
+	tick2 = cv::getTickCount();
+	printf("PPF Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
 	printf("Estimated Poses:\n");
 
@@ -1187,7 +1192,8 @@ int main()
 #endif
 		int64 t1 = cv::getTickCount();
 		//getch();
-		t_icp_register(modelT, pcTest, 0.01, 250, 4, 1, 8, 0, 0, &Residual, PoseICP); 
+		t_icp_register(modelT, pcTest, 0.05, 200, 4, 1, 8, 0, 0, &Residual, PoseICP); 
+		int64 t2 = cv::getTickCount();
 
 		matrix_product44(PoseICP, pose->Pose, PoseFull);
 
@@ -1200,7 +1206,6 @@ int main()
 			printf("\n");
 		}
 		printf("\n");
-		int64 t2 = cv::getTickCount();
 		printf("Pose %d - Elapsed Time: %f\n", i, (double)(t2-t1)/cv::getTickFrequency());
 
 		// Visualize registration
@@ -1208,8 +1213,8 @@ int main()
 		TMesh* MeshTr = transform_mesh_new(mesh, PoseFull);
 		Mat pct = transform_pc_pose(pc, PoseFull);
 		//write_ply(pct, outputResultFile);
-		t_write_mesh_ply(MeshTr, outputResultFile);
-		write_ply(pcTest, scenePCFile);
+		//t_write_mesh_ply(MeshTr, outputResultFile);
+		//write_ply(pcTest, scenePCFile);
 
 		destroy_mesh(&MeshTr);
 
@@ -1391,7 +1396,7 @@ int main_sampling()
 #endif
 
 	int64 t1 = cv::getTickCount();
-	Mat sampled2 = sample_pc_octree(pc, xRange, yRange, zRange, 0.01);
+	Mat sampled2 = sample_pc_by_quantization(pc, xRange, yRange, zRange, 0.01);
 	int64 t2 = cv::getTickCount();
 	printf("Elapsed : %f\n", (t2-t1)/cv::getTickFrequency());
 
@@ -1408,7 +1413,7 @@ int main_sampling()
 }
 
 // test octree point cloud sampling
-int main_octree_sampling()
+/*int main_octree_sampling()
 {
 	int useNormals = 1;
 	int withBbox = 1;
@@ -1427,7 +1432,7 @@ int main_octree_sampling()
 #endif
 
 	return 0;
-}
+}*/
 
 // test octree visualization
 int main_octree_vis()
@@ -1456,61 +1461,61 @@ bool is_in_bbox(const float *point, const float range[2])
 		point[1] <= range[1] &&
 		point[2] <= range[1];
 }
-
-// test octree
-int main_octree()
-{
-	TOctreeNode oc;
-	const float dim = 2;
-	float root[3]={0,0,0};
-	float dimHalf[3]={dim/2,dim/2,dim/2};
-
-	float range[2]={-0.05, 0.05};
-
-	t_octree_init(&oc, root, dimHalf);
-
-	std::vector<float*> points;
-	std::vector<float*> resultsGT, resultsOT;
-
-	// Create a bunch of random points
-	const int nPoints = 1 * 1000 * 1000; 
-	for(int i=0; i<nPoints; ++i) 
-	{
-		float px = (0-dim/2) + (dim*rand()) * ((dim/2) / RAND_MAX);
-		float py = (0-dim/2) + (dim*rand()) * ((dim/2) / RAND_MAX);
-		float pz = (0-dim/2) + (dim*rand()) * ((dim/2) / RAND_MAX);
-
-		float* pt =new float[3];
-		pt[0]=px;
-		pt[1]=py;
-		pt[2]=pz;
-		points.push_back(pt);
-
-		bool gt = is_in_bbox(pt, range) ;
-		resultsGT.push_back(pt);
-
-		if (gt)
-			printf("%f %f %f\n", pt[0], pt[1], pt[2]);
-
-		t_octree_insert(&oc, pt);
-	}
-
-	// now compute octree results
-
-	printf("\n----------------------------------------------------------------\n");
-
-	t_octree_query_in_bbox(&oc, range, range, range, resultsOT);
-
-	for(unsigned int i=0; i<resultsOT.size(); ++i) 
-	{
-		float* rot = resultsOT[i];
-		printf("%f %f %f\n", rot[0], rot[1], rot[2]);
-	}
-
-
-
-	return 0;
-}
+//
+//// test octree
+//int main_octree()
+//{
+//	TOctreeNode oc;
+//	const float dim = 2;
+//	float root[3]={0,0,0};
+//	float dimHalf[3]={dim/2,dim/2,dim/2};
+//
+//	float range[2]={-0.05, 0.05};
+//
+//	t_octree_init(&oc, root, dimHalf);
+//
+//	std::vector<float*> points;
+//	std::vector<float*> resultsGT, resultsOT;
+//
+//	// Create a bunch of random points
+//	const int nPoints = 1 * 1000 * 1000; 
+//	for(int i=0; i<nPoints; ++i) 
+//	{
+//		float px = (0-dim/2) + (dim*rand()) * ((dim/2) / RAND_MAX);
+//		float py = (0-dim/2) + (dim*rand()) * ((dim/2) / RAND_MAX);
+//		float pz = (0-dim/2) + (dim*rand()) * ((dim/2) / RAND_MAX);
+//
+//		float* pt =new float[3];
+//		pt[0]=px;
+//		pt[1]=py;
+//		pt[2]=pz;
+//		points.push_back(pt);
+//
+//		bool gt = is_in_bbox(pt, range) ;
+//		resultsGT.push_back(pt);
+//
+//		if (gt)
+//			printf("%f %f %f\n", pt[0], pt[1], pt[2]);
+//
+//		t_octree_insert(&oc, pt);
+//	}
+//
+//	// now compute octree results
+//
+//	printf("\n----------------------------------------------------------------\n");
+//
+//	t_octree_query_in_bbox(&oc, range, range, range, resultsOT);
+//
+//	for(unsigned int i=0; i<resultsOT.size(); ++i) 
+//	{
+//		float* rot = resultsOT[i];
+//		printf("%f %f %f\n", rot[0], rot[1], rot[2]);
+//	}
+//
+//
+//
+//	return 0;
+//}
 
 // test bounding box  _bbox
 int main_bbox()

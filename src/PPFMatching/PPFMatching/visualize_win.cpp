@@ -2,7 +2,7 @@
 #include "WindowGL.h"
 #include "visualize_win.h"
 #include "helpers.h"
-#include "gl_utils.h"
+//#include "gl_utils.h"
 
 using namespace cv;
 
@@ -10,7 +10,7 @@ typedef struct
 {
 	Mat PC;
 	Mat PC2;
-	TOctreeNode* octree;
+//	TOctreeNode* octree;
 	TWindowGL* window;
 	int withNormals, withBbox, withOctree;
 }TWindowData;
@@ -20,6 +20,193 @@ static float light_position[] = {-100.0, 100.0, 1.0, 0.0};
 static float amb[] =  {0.24, 0.24, 0.24, 0.0};
 static float dif[] =  {1.0, 1.0, 1.0, 0.0};
 
+
+void draw_cube(float center_x, float center_y, float center_z, float size)
+{
+    float half_size = size / 2.0;
+    float front     = center_z - half_size;
+    float back      = center_z + half_size;
+    float left      = center_x - half_size;
+    float right     = center_x + half_size;
+    float bottom    = center_y - half_size;
+    float top       = center_y + half_size;
+
+    glPushMatrix();
+	glPolygonMode(GL_BACK, GL_LINE); 
+	glPolygonMode(GL_FRONT, GL_LINE); 
+
+    // red side - front
+    glBegin(GL_POLYGON);
+    //glColor3f(1.0, 0.0, 0.0);
+    glVertex3f(right, bottom, front);
+    glVertex3f(right, top,    front);
+    glVertex3f(left,  top,    front);
+    glVertex3f(left,  bottom, front);
+    glEnd();
+
+    // green side - back
+    glBegin(GL_POLYGON);
+    //glColor3f(0.0, 1.0, 0.0);
+    glVertex3f(right, bottom, back);
+    glVertex3f(right, top,    back);
+    glVertex3f(left,  top,    back);
+    glVertex3f(left,  bottom, back);
+    glEnd();
+
+    // blue side - right
+    glBegin(GL_POLYGON);
+    //glColor3f(0.0, 0.0, 1.0);
+    glVertex3f(right, bottom, front);
+    glVertex3f(right, top,    front);
+    glVertex3f(right, top,    back);
+    glVertex3f(right, bottom, back);
+    glEnd();
+
+    // yellow side - left
+    glBegin(GL_POLYGON);
+    //glColor3f(1.0, 1.0, 0.0);
+    glVertex3f(left, bottom, back);
+    glVertex3f(left, top,    back);
+    glVertex3f(left, top,    front);
+    glVertex3f(left, bottom, front);
+    glEnd();
+
+    // magneta side - top
+    glBegin(GL_POLYGON);
+    //glColor3f(1.0, 0.0, 1.0);
+    glVertex3f(right, top, back);
+    glVertex3f(right, top, front);
+    glVertex3f(left,  top, front);
+    glVertex3f(left,  top, back);
+    glEnd();
+
+    // cyan side - bottom
+    glBegin(GL_POLYGON);
+    //glColor3f(0.0, 1.0, 1.0);
+    glVertex3f(right, bottom, front);
+    glVertex3f(right, bottom, back);
+    glVertex3f(left,  bottom, back);
+    glVertex3f(left,  bottom, front);
+    glEnd();
+
+    glPopMatrix();
+}
+
+void draw_prism(float center_x, float center_y, float center_z, float sizex, float sizey, float sizez)
+{
+    float half_sizex = sizex / 2.0;
+    float half_sizey = sizey / 2.0;
+    float half_sizez = sizez / 2.0;
+    float front     = center_z - half_sizez;
+    float back      = center_z + half_sizez;
+    float left      = center_x - half_sizex;
+    float right     = center_x + half_sizex;
+    float bottom    = center_y - half_sizey;
+    float top       = center_y + half_sizey;
+
+    glPushMatrix();
+	glPolygonMode(GL_BACK, GL_LINE); 
+	glPolygonMode(GL_FRONT, GL_LINE); 
+
+    // red side - front
+    glBegin(GL_POLYGON);
+    //glColor3f(1.0, 0.0, 0.0);
+    glVertex3f(right, bottom, front);
+    glVertex3f(right, top,    front);
+    glVertex3f(left,  top,    front);
+    glVertex3f(left,  bottom, front);
+    glEnd();
+
+    // green side - back
+    glBegin(GL_POLYGON);
+    //glColor3f(0.0, 1.0, 0.0);
+    glVertex3f(right, bottom, back);
+    glVertex3f(right, top,    back);
+    glVertex3f(left,  top,    back);
+    glVertex3f(left,  bottom, back);
+    glEnd();
+
+    // blue side - right
+    glBegin(GL_POLYGON);
+    //glColor3f(0.0, 0.0, 1.0);
+    glVertex3f(right, bottom, front);
+    glVertex3f(right, top,    front);
+    glVertex3f(right, top,    back);
+    glVertex3f(right, bottom, back);
+    glEnd();
+
+    // yellow side - left
+    glBegin(GL_POLYGON);
+    //glColor3f(1.0, 1.0, 0.0);
+    glVertex3f(left, bottom, back);
+    glVertex3f(left, top,    back);
+    glVertex3f(left, top,    front);
+    glVertex3f(left, bottom, front);
+    glEnd();
+
+    // magneta side - top
+    glBegin(GL_POLYGON);
+    //glColor3f(1.0, 0.0, 1.0);
+    glVertex3f(right, top, back);
+    glVertex3f(right, top, front);
+    glVertex3f(left,  top, front);
+    glVertex3f(left,  top, back);
+    glEnd();
+
+    // cyan side - bottom
+    glBegin(GL_POLYGON);
+    //glColor3f(0.0, 1.0, 1.0);
+    glVertex3f(right, bottom, front);
+    glVertex3f(right, bottom, back);
+    glVertex3f(left,  bottom, back);
+    glVertex3f(left,  bottom, front);
+    glEnd();
+
+    glPopMatrix();
+}
+
+void draw_bbox(float xRange[2], float yRange[2], float zRange[2])
+{
+	glBegin(GL_LINES);
+
+	glVertex3f(xRange[0], yRange[0], zRange[0]);
+	glVertex3f(xRange[1], yRange[0], zRange[0]);
+
+	glVertex3f(xRange[0], yRange[0], zRange[0]);
+	glVertex3f(xRange[0], yRange[1], zRange[0]);
+
+	glVertex3f(xRange[0], yRange[0], zRange[0]);
+	glVertex3f(xRange[0], yRange[0], zRange[1]);
+
+	glVertex3f(xRange[1], yRange[1], zRange[1]);
+	glVertex3f(xRange[1], yRange[1], zRange[0]);
+
+	glVertex3f(xRange[1], yRange[1], zRange[1]);
+	glVertex3f(xRange[1], yRange[0], zRange[1]);
+
+	glVertex3f(xRange[1], yRange[1], zRange[1]);
+	glVertex3f(xRange[0], yRange[1], zRange[1]);
+
+	glVertex3f(xRange[1], yRange[0], zRange[0]);
+	glVertex3f(xRange[1], yRange[0], zRange[1]);
+
+	glVertex3f(xRange[1], yRange[0], zRange[0]);
+	glVertex3f(xRange[1], yRange[1], zRange[0]);
+
+	glVertex3f(xRange[0], yRange[1], zRange[0]);
+	glVertex3f(xRange[0], yRange[1], zRange[1]);
+
+	glVertex3f(xRange[0], yRange[1], zRange[0]);
+	glVertex3f(xRange[1], yRange[1], zRange[0]);
+
+	glVertex3f(xRange[0], yRange[0], zRange[1]);
+	glVertex3f(xRange[0], yRange[1], zRange[1]);
+
+	glVertex3f(xRange[0], yRange[0], zRange[1]);
+	glVertex3f(xRange[1], yRange[0], zRange[1]);
+
+	glEnd();
+}
 
 int display(void* UserData)
 {
@@ -168,7 +355,7 @@ int display(void* UserData)
 
 	if (withOctree)
 	{
-		float cx = (xRange[1] + xRange[0])*0.5f;
+	/*	float cx = (xRange[1] + xRange[0])*0.5f;
 		float cy = (yRange[1] + yRange[0])*0.5f;
 		float cz = (zRange[1] + zRange[0])*0.5f;
 		wd->octree = Mat2Octree(pcn);
@@ -180,7 +367,7 @@ int display(void* UserData)
 		glPointSize(glSize);
 		glColor4f(1,1,1,1);
 		draw_octree(wd->octree, cx, cy, cz, xRange[1] - xRange[0], yRange[1] - yRange[0], zRange[1] - zRange[0]);
-		t_octree_destroy(wd->octree);
+		t_octree_destroy(wd->octree);*/
 	}
 
 	//SwapBuffers(window->hDC);
@@ -278,11 +465,11 @@ void* visualize_pc(Mat pc, int withNormals, int withBbox, int withOctree, char* 
 	wd->withNormals=withNormals;
 	wd->withBbox=withBbox;
 	wd->withOctree = withOctree;
-	wd->octree=0;
+//	wd->octree=0;
 
 	if (withOctree)
 	{
-		wd->octree = Mat2Octree(pc);
+//		wd->octree = Mat2Octree(pc);
 	}
 
 	//draw_custom_gl_scene(window, display, wd);

@@ -1,4 +1,9 @@
 
+/*
+	Author: Tolga Birdal
+
+*/
+
 #include<string.h>
 #include<stdio.h>
 #include<stdlib.h>

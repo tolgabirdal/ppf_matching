@@ -179,38 +179,6 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\c_utils.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\depth_to_3d.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\dsyevc3.c"
-				>
-			</File>
-			<File
-				RelativePath=".\dsyevh3.c"
-				>
-			</File>
-			<File
-				RelativePath=".\dsyevq3.c"
-				>
-			</File>
-			<File
-				RelativePath=".\dsytrd3.c"
-				>
-			</File>
-			<File
-				RelativePath=".\fasthash.c"
-				>
-			</File>
-			<File
-				RelativePath=".\gl_utils.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\helpers.cpp"
 				>
 			</File>
@@ -219,19 +187,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\normal.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\rply.c"
 				>
 			</File>
 			<File
 				RelativePath=".\t_icp.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\t_octree.cpp"
 				>
 			</File>
 			<File
@@ -244,10 +204,6 @@
 			</File>
 			<File
 				RelativePath=".\trackball.c"
-				>
-			</File>
-			<File
-				RelativePath=".\utils.cpp"
 				>
 			</File>
 			<File
@@ -269,34 +225,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\depth_to_3d.h"
-				>
-			</File>
-			<File
-				RelativePath=".\dsyevc3.h"
-				>
-			</File>
-			<File
-				RelativePath=".\dsyevh3.h"
-				>
-			</File>
-			<File
-				RelativePath=".\dsyevq3.h"
-				>
-			</File>
-			<File
-				RelativePath=".\dsytrd3.h"
-				>
-			</File>
-			<File
-				RelativePath=".\fasthash.h"
-				>
-			</File>
-			<File
-				RelativePath=".\gl_utils.h"
-				>
-			</File>
-			<File
 				RelativePath=".\hash_murmur.h"
 				>
 			</File>
@@ -309,15 +237,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\t_eig.h"
-				>
-			</File>
-			<File
 				RelativePath=".\t_icp.h"
-				>
-			</File>
-			<File
-				RelativePath=".\t_octree.h"
 				>
 			</File>
 			<File
@@ -334,10 +254,6 @@
 			</File>
 			<File
 				RelativePath=".\TRgbGL.h"
-				>
-			</File>
-			<File
-				RelativePath=".\utils.h"
 				>
 			</File>
 			<File

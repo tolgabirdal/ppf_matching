@@ -35,12 +35,12 @@
 #define TNorm3(v) (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))
 
 #define TNormalize3(v)\
-double normTemp=TNorm3(v);\
-if (normTemp>0)\
+	double normTemp=TNorm3(v);\
+	if (normTemp>0)\
 {\
-v[0]/=normTemp;\
-v[1]/=normTemp;\
-v[2]/=normTemp;\
+	v[0]/=normTemp;\
+	v[1]/=normTemp;\
+	v[2]/=normTemp;\
 }
 
 #define TCross(a, b, c) c[0] = (a[1])*(b[2])-(a[2])*(b[1]); c[1] = (a[2])*(b[0])-(a[0])*(b[2]); c[2] = (a[0])*(b[1])-(a[1])*(b[0]);
@@ -55,21 +55,13 @@ v[2]/=normTemp;\
 #if defined(_MSC_VER)
 __inline int round(double number)
 {
-    return (number >= 0) ? (int)(number + 0.5) : (int)(number - 0.5);
+	return (number >= 0) ? (int)(number + 0.5) : (int)(number - 0.5);
 }
 #endif
 
 #if defined (__cplusplus)
 extern "C" {
 #endif 
-
-	void matrix_cross4(const double *u, const double *v, const double *w, double *x);
-	void matrix_cross_matrix(double *v, double *v_cross) ;
-	
-	void matrix_to_axis_angle(double *R, double *axis, double *angle);
-	void axis_angle_to_matrix(double *axis, double angle, double *R);
-	void matrix_to_quaternion(double *R, double *q);
-	void quaternion_to_matrix(double *q, double *R);
 
 	static __inline void matrix_product33(double *A, double *B, double *R)
 	{
@@ -183,7 +175,7 @@ extern "C" {
 		Pose[15] = 1;
 	}
 
-	
+
 	static __inline void pose_to_rt(const double Pose[16], double R[9], double t[3])
 	{
 		R[0] = Pose[0];
@@ -217,7 +209,7 @@ extern "C" {
 
 	/*static __inline int next_power_of_two(int x)
 	{
-		return (int)pow(2.0, ceil(log((double)x)/log(2.0)));;
+	return (int)pow(2.0, ceil(log((double)x)/log(2.0)));;
 	}*/
 
 
@@ -402,6 +394,247 @@ extern "C" {
 			(*ny) *= -1;
 			(*nz) *= -1;
 		}
+	}
+
+
+	static __inline void matrix_to_axis_angle(double *R, double *axis, double *angle)
+	{
+		double d1 = R[7] - R[5];
+		double d2 = R[2] - R[6];
+		double d3 = R[3] - R[1];
+
+		double norm = sqrt(d1 * d1 + d2 * d2 + d3 * d3);
+		double x = (R[7] - R[5]) / norm;
+		double y = (R[2] - R[6]) / norm;
+		double z = (R[3] - R[1]) / norm;
+
+		*angle = acos((R[0] + R[4] + R[8] - 1.0) * 0.5);
+
+		axis[0] = x;
+		axis[1] = y;
+		axis[2] = z;
+	}
+
+	static __inline void axis_angle_to_matrix(double *axis, double angle, double *R)
+	{
+		double ident[9];
+		double n[9] = { 0.0, -axis[2], axis[1],
+			axis[2], 0.0, -axis[0],
+			-axis[1], axis[0], 0.0 };
+
+		double nsq[9], sn[9], cnsq[9], tmp[9];
+		double c, s;
+		int i;
+
+		//c = 1-cos(angle);
+		c = cos(angle);
+		s = sin(angle);
+
+		matrix_ident(3, ident);
+		matrix_product33(n, n, nsq);
+
+		for (i = 0; i < 9; i++)
+		{
+			const double sni = n[i]*s;
+			const double cnsqi = nsq[i]*(c);
+			R[i]=ident[i]+sni+cnsqi;
+		}
+
+		//matrix_scale(3, 3, n, s, sn);
+		//matrix_scale(3, 3, nsq, (1 - c), cnsq);
+		//matrix_sum(3, 3, 3, 3, ident, sn, tmp);
+		//matrix_sum(3, 3, 3, 3, tmp, cnsq, R);
+	}
+
+	static __inline void matrix_to_quaternion(double *R, double *q) 
+	{
+		double n4; // the norm of quaternion multiplied by 4 
+		double tr = R[0] + R[4] + R[8]; // trace of martix
+		double factor;
+
+		if (tr > 0.0) {
+			q[1] = R[5] - R[7];
+			q[2] = R[6] - R[2];
+			q[3] = R[1] - R[3];
+			q[0] = tr + 1.0;
+			n4 = q[0];
+		} else if ((R[0] > R[4]) && (R[0] > R[8])) {
+			q[1] = 1.0 + R[0] - R[4] - R[8];
+			q[2] = R[3] + R[1];
+			q[3] = R[6] + R[2];
+			q[0] = R[5] - R[7];
+			n4 = q[1];
+		} else if (R[4] > R[8]) {
+			q[1] = R[3] + R[1];
+			q[2] = 1.0 + R[4] - R[0] - R[8];
+			q[3] = R[7] + R[5];
+			q[0] = R[6] - R[2]; 
+			n4 = q[2];
+		} else {
+			q[1] = R[6] + R[2];
+			q[2] = R[7] + R[5];
+			q[3] = 1.0 + R[8] - R[0] - R[4];
+			q[0] = R[1] - R[3];
+			n4 = q[3];
+		}
+
+		factor = 0.5 / sqrt(n4);
+		q[0] *= factor;
+		q[1] *= factor;
+		q[2] *= factor;
+		q[3] *= factor;
+	}
+
+	static __inline void quaternion_to_matrix(double *q, double *R)
+	{
+		double sqw = q[0] * q[0];
+		double sqx = q[1] * q[1]; 
+		double sqy = q[2] * q[2];
+		double sqz = q[3] * q[3];
+
+		double tmp1, tmp2;
+
+		R[0] =  sqx - sqy - sqz + sqw; // since sqw + sqx + sqy + sqz = 1
+		R[4] = -sqx + sqy - sqz + sqw;    
+		R[8] = -sqx - sqy + sqz + sqw;
+
+		tmp1 = q[1] * q[2];
+		tmp2 = q[3] * q[0];
+
+		R[1] = 2.0 * (tmp1 + tmp2);    
+		R[3] = 2.0 * (tmp1 - tmp2);        
+
+		tmp1 = q[1] * q[3];    
+		tmp2 = q[2] * q[0];    
+
+		R[2] = 2.0 * (tmp1 - tmp2);    
+		R[6] = 2.0 * (tmp1 + tmp2);    
+
+		tmp1 = q[2] * q[3];    
+		tmp2 = q[1] * q[0];    
+
+		R[5] = 2.0 * (tmp1 + tmp2);   
+		R[7] = 2.0 * (tmp1 - tmp2);
+	}
+
+
+	static __inline int t_eigen_33_lowest(const double C[3][3], double A[3])
+	{
+		const double a = C[0][0];
+		const double b = C[0][1];
+		const double c = C[0][2];
+		const double d = C[1][1];
+		const double e = C[1][2];
+		const double f = C[2][2];
+		const double t2 = c*c;
+		const double t3 = e*e;
+		const double t4 = b*t2;
+		const double t5 = c*d*e;
+		const double t34 = b*t3;
+		const double t35 = a*c*e;
+		const double t6 = t4+t5-t34-t35;
+		const double t7 = 1.0/t6;
+		const double t8 = a+d+f;
+		const double t9 = b*b;
+		const double t23 = a*d;
+		const double t24 = a*f;
+		const double t25 = d*f;
+		const double t10 = t2+t3+t9-t23-t24-t25;
+		const double t11 = t8*t10*(1.0/6.0);
+		const double t12 = t8*t8;
+		const double t20 = t8*t12*(1.0/2.7E1);
+		const double t21 = b*c*e;
+		const double t22 = a*d*f*(1.0/2.0);
+		const double t26 = a*t3*(1.0/2.0);
+		const double t27 = d*t2*(1.0/2.0);
+		const double t28 = f*t9*(1.0/2.0);
+		const double t13 = t11+t20+t21+t22-t26-t27-t28;
+		const double t14 = t9*(1.0/3.0);
+		const double t15 = t2*(1.0/3.0);
+		const double t16 = t3*(1.0/3.0);
+		const double t17 = t12*(1.0/9.0);
+		const double t30 = a*d*(1.0/3.0);
+		const double t31 = a*f*(1.0/3.0);
+		const double t32 = d*f*(1.0/3.0);
+		const double t18 = t14+t15+t16+t17-t30-t31-t32;
+		const double t19 = t18*t18;
+		const double t29 = t11+t20+t21+t22-t26-t27-t28;
+		const double t36 = a*(1.0/3.0);
+		const double t37 = d*(1.0/3.0);
+		const double t38 = f*(1.0/3.0);
+		const double t39 = t8*(t2+t3+t9-t23-t24-t25)*(1.0/6.0);
+		const double t41 = t18*t19;
+		const double t33 = t36+t37+t38+t18*1.0/pow(t11+t20+t21+t22-a*t3*(1.0/2.0)-d*t2*(1.0/2.0)-f*t9*(1.0/2.0)+sqrt(-t41+t13*t13),1.0/3.0)+pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t29*t29),1.0/3.0);
+		const double t40 = t11+t20+t21+t22-t26-t27-t28;
+		const double t42 = t11+t20+t21+t22-t26-t27-t28;
+		const double t43 = e*t2;
+		const double t60 = b*c*f;
+		const double t61 = d*e*f;
+		const double t44 = t43-t60-t61+e*t3;
+		const double t45 = t7*t44;
+		const double t46 = t11+t20+t21+t22-t26-t27-t28;
+		const double t47 = t11+t20+t21+t22-t26-t27-t28;
+		const double t48 = t11+t20+t21+t22-t26-t27-t28;
+		const double t49 = t11+t20+t21+t22-t26-t27-t28;
+		const double t57 = sqrt(3.0);
+		const double t50 = t36+t37+t38-t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t46*t46),1.0/3.0)*(1.0/2.0)-t57*(t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t48*t48),1.0/3.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t49*t49),1.0/3.0))*5.0E-1*sqrt(-1.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t47*t47),1.0/3.0)*(1.0/2.0);
+		const double t51 = b*c;
+		const double t52 = d*e;
+		const double t53 = e*f;
+		const double t54 = t51+t52+t53;
+		const double t55 = t11+t20+t21+t22-t26-t27-t28;
+		const double t56 = t11+t20+t21+t22-t26-t27-t28;
+		const double t58 = t11+t20+t21+t22-t26-t27-t28;
+		const double t59 = t11+t20+t21+t22-t26-t27-t28;
+		const double t62 = t11+t20+t21+t22-t26-t27-t28;
+		const double t63 = t11+t20+t21+t22-t26-t27-t28;
+		const double t64 = t11+t20+t21+t22-t26-t27-t28;
+		const double t65 = t11+t20+t21+t22-t26-t27-t28;
+		const double t66 = t36+t37+t38-t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t62*t62),1.0/3.0)*(1.0/2.0)+t57*(t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t64*t64),1.0/3.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t65*t65),1.0/3.0))*5.0E-1*sqrt(-1.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t63*t63),1.0/3.0)*(1.0/2.0);
+		const double t67 = t11+t20+t21+t22-t26-t27-t28;
+		const double t68 = t11+t20+t21+t22-t26-t27-t28;
+		const double t69 = t11+t20+t21+t22-t26-t27-t28;
+		const double t70 = t11+t20+t21+t22-t26-t27-t28;
+		const double t71 = t11+t20+t21+t22-t26-t27-t28;
+		const double t72 = t11+t20+t21+t22-t26-t27-t28;
+		const double t73 = t36+t37+t38+t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t71*t71),1.0/3.0)+pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t72*t72),1.0/3.0);
+		const double t74 = t11+t20+t21+t22-t26-t27-t28;
+		const double t75 = t11+t20+t21+t22-t26-t27-t28;
+		const double t76 = c*t3;
+		const double t91 = a*c*f;
+		const double t92 = b*e*f;
+		const double t77 = t76-t91-t92+c*t2;
+		const double t78 = t11+t20+t21+t22-t26-t27-t28;
+		const double t79 = t11+t20+t21+t22-t26-t27-t28;
+		const double t80 = t11+t20+t21+t22-t26-t27-t28;
+		const double t81 = t11+t20+t21+t22-t26-t27-t28;
+		const double t82 = t36+t37+t38-t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t78*t78),1.0/3.0)*(1.0/2.0)-t57*(t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t80*t80),1.0/3.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t81*t81),1.0/3.0))*5.0E-1*sqrt(-1.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t79*t79),1.0/3.0)*(1.0/2.0);
+		const double t83 = a*c;
+		const double t84 = b*e;
+		const double t85 = c*f;
+		const double t86 = t83+t84+t85;
+		const double t87 = t11+t20+t21+t22-t26-t27-t28;
+		const double t88 = t11+t20+t21+t22-t26-t27-t28;
+		const double t89 = t11+t20+t21+t22-t26-t27-t28;
+		const double t90 = t11+t20+t21+t22-t26-t27-t28;
+		const double t93 = t11+t20+t21+t22-t26-t27-t28;
+		const double t94 = t11+t20+t21+t22-t26-t27-t28;
+		const double t95 = t11+t20+t21+t22-t26-t27-t28;
+		const double t96 = t11+t20+t21+t22-t26-t27-t28;
+		const double t97 = t36+t37+t38-t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t93*t93),1.0/3.0)*(1.0/2.0)+t57*(t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t95*t95),1.0/3.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t96*t96),1.0/3.0))*5.0E-1*sqrt(-1.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t94*t94),1.0/3.0)*(1.0/2.0);
+		const double t98 = t11+t20+t21+t22-t26-t27-t28;
+		const double t99 = t11+t20+t21+t22-t26-t27-t28;
+		const double t100 = t11+t20+t21+t22-t26-t27-t28;
+		const double t101 = t11+t20+t21+t22-t26-t27-t28;
+		//A0[0][0] = t45-e*t7*(t33*t33)+t7*t54*(t36+t37+t38+t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t40*t40),1.0/3.0)+pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t42*t42),1.0/3.0));
+		//A0[0][1] = t45-e*t7*(t50*t50)+t7*t54*(t36+t37+t38-t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t55*t55),1.0/3.0)*(1.0/2.0)-t57*(t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t58*t58),1.0/3.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t59*t59),1.0/3.0))*5.0E-1*sqrt(-1.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t56*t56),1.0/3.0)*(1.0/2.0));
+		A[0] = t45-e*t7*(t66*t66)+t7*t54*(t36+t37+t38-t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t67*t67),1.0/3.0)*(1.0/2.0)+t57*(t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t69*t69),1.0/3.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t70*t70),1.0/3.0))*5.0E-1*sqrt(-1.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t68*t68),1.0/3.0)*(1.0/2.0));
+		//A0[1][0] = -t7*t77+c*t7*(t73*t73)-t7*t86*(t36+t37+t38+t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t74*t74),1.0/3.0)+pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t75*t75),1.0/3.0));
+		//A0[1][1] = -t7*t77+c*t7*(t82*t82)-t7*t86*(t36+t37+t38-t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t87*t87),1.0/3.0)*(1.0/2.0)-t57*(t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t89*t89),1.0/3.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t90*t90),1.0/3.0))*5.0E-1*sqrt(-1.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t88*t88),1.0/3.0)*(1.0/2.0));
+		A[1] = -t7*t77+c*t7*(t97*t97)-t7*t86*(t36+t37+t38-t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t98*t98),1.0/3.0)*(1.0/2.0)+t57*(t18*1.0/pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t100*t100),1.0/3.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t101*t101),1.0/3.0))*5.0E-1*sqrt(-1.0)-pow(t20+t21+t22-t26-t27-t28+t39+sqrt(-t41+t99*t99),1.0/3.0)*(1.0/2.0));
+		//A0[2][0] = 1.0;
+		//A0[2][1] = 1.0;
+		A[2] = 1.0;
 	}
 
 
