@@ -146,7 +146,7 @@ Mat sample_pc_uniform(Mat PC, int sampleStep)
 
 Mat sample_pc_uniform_ind(Mat PC, int sampleStep, vector<int> &indices)
 {
-	int numRows = round((double)PC.rows/(double)sampleStep);
+	int numRows = cvRound((double)PC.rows/(double)sampleStep);
 	indices.resize(numRows);
 	Mat sampledPC = Mat(numRows, PC.cols, PC.type());
 
@@ -161,7 +161,7 @@ Mat sample_pc_uniform_ind(Mat PC, int sampleStep, vector<int> &indices)
 }
 
 // not yet implemented
-Mat sample_pc_perfect_uniform(Mat PC, int sampleStep)
+/*Mat sample_pc_perfect_uniform(Mat PC, int sampleStep)
 {
 	// make a symmetric square matrix for sampling
 	int numPoints = PC.rows;
@@ -171,7 +171,7 @@ Mat sample_pc_perfect_uniform(Mat PC, int sampleStep)
 	int numTotalPerfect = n*n;
 	
 	return Mat();
-}
+}*/
 
 void* index_pc_flann(Mat pc)
 {	
@@ -511,35 +511,6 @@ void compute_bbox_std(Mat pc, float xRange[2], float yRange[2], float zRange[2])
 	}
 }
 
-Mat normalize_pc(Mat pc, float scale)
-{
-	double minVal=0, maxVal=0;
-
-	Mat x,y,z, pcn;
-	pc.col(0).copyTo(x);
-	pc.col(1).copyTo(y);
-	pc.col(2).copyTo(z);
-
-	float cx = cv::mean(x).val[0];
-	float cy = cv::mean(y).val[0];
-	float cz = cv::mean(z).val[0];
-
-	cv::minMaxIdx(pc, &minVal, &maxVal);
-
-	x=x-cx;
-	y=y-cy;
-	z=z-cz;
-	pcn.create(pc.rows, 3, CV_32FC1);
-	x.copyTo(pcn.col(0));
-	y.copyTo(pcn.col(1));
-	z.copyTo(pcn.col(2));
-
-	cv::minMaxIdx(pcn, &minVal, &maxVal);
-	pcn=(float)scale*(pcn)/((float)maxVal-(float)minVal);
-	
-	return pcn;
-}
-
 Mat normalize_pc_coeff(Mat pc, float scale, float* Cx, float* Cy, float* Cz, float* MinVal, float* MaxVal)
 {
 	double minVal=0, maxVal=0;
@@ -689,35 +660,6 @@ void get_random_pose(double Pose[16])
 	t[2] = (float)rand()/(float)(RAND_MAX);
 
 	rt_to_pose(R,t,Pose);
-}
-
-// this is not completely correct. Use get_random_pose instead
-void generate_random_pose(double Pose[16], double scale)
-{
-	Mat S, U, V, R;
-	Mat randR = gen_random_mat(3,3,scale,scale,CV_64FC1);
-
-	cv::SVDecomp(randR, S, U, V);
-	S = Mat::eye(3, 3, CV_64F);
-	R = U*S*V;
-
-	Mat randT = gen_random_mat(3,1,scale,scale,CV_64FC1);
-	
-	Pose[0]=R.at<double>(0,0);
-	Pose[1]=R.at<double>(0,1);
-	Pose[2]=R.at<double>(0,2);
-	Pose[4]=R.at<double>(1,0);
-	Pose[5]=R.at<double>(1,1);
-	Pose[6]=R.at<double>(1,2);
-	Pose[8]=R.at<double>(2,0);
-	Pose[9]=R.at<double>(2,1);
-	Pose[10]=R.at<double>(2,2);
-
-	Pose[3]=randT.at<double>(0)-0.5;
-	Pose[7]=randT.at<double>(1)-0.5;
-	Pose[11]=randT.at<double>(2)-0.5;
-
-	Pose[15] = 1;
 }
 
 Mat add_noise_pc(Mat pc, double scale)

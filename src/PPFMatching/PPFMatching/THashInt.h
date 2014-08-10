@@ -2,7 +2,8 @@
 #ifndef THASHINT_H
 #define THASHINT_H
 
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef unsigned int KeyType;
 
@@ -19,7 +20,7 @@ typedef struct HSHTBL_i {
 } hashtable_int;
 
 
-static __inline unsigned int next_power_of_two(unsigned int value)
+__inline static unsigned int next_power_of_two(unsigned int value)
 {
 	/* Round up to the next highest power of 2 */
 	/* from http://www-graphics.stanford.edu/~seander/bithacks.html */

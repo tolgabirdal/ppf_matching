@@ -412,41 +412,6 @@ double compute_alpha(const double p1[4], const double n1[4], const double p2[4])
 }
 
 
-Mat compute_ppf_pc_train(const Mat PC, const double distanceStep, const double angleStep)
-{
-	Mat PPFMat = Mat(PC.rows*PC.rows, T_PPF_LENGTH, CV_32FC1);
-
-	for (int i=0; i<PC.rows; i++)
-	{
-		for (int j=0; j<PC.rows; j++)
-		{
-			// cannnot compute the ppf with myself
-			if (i!=j)
-			{
-				float* f1 = (float*)(&PC.data[i * PC.step]);
-				float* f2 = (float*)(&PC.data[j * PC.step]);
-				const double p1[4] = {f1[0], f1[1], f1[2], 1};
-				const double p2[4] = {f2[0], f1[1], f1[2], 1};
-				const double n1[4] = {f1[3], f1[4], f1[5], 1};
-				const double n2[4] = {f2[3], f1[4], f1[5], 1};
-
-				double f[4]={0};
-				compute_ppf_features(p1, n1, p2, n2, f);
-				double alpha = compute_alpha(p1, n1, p2);
-
-				int corrInd = i*PC.rows+j;
-				PPFMat.data[ corrInd ] = f[0];
-				PPFMat.data[ corrInd + 1 ] = f[1];
-				PPFMat.data[ corrInd + 2 ] = f[2];
-				PPFMat.data[ corrInd + 3 ] = f[3];
-				PPFMat.data[ corrInd + 4 ] = (float)alpha;
-			}
-		}
-	}
-
-	return PPFMat;
-}
-
 // TODO: Check all step sizes to be positive
 Mat train_pc_ppf(const Mat PC, const double sampling_step_relative, const double distance_step_relative, const double angle_step_relative, TPPFModelPC** Model3D)
 {
@@ -599,7 +564,7 @@ int sort_pose_clusters (const PoseCluster* a, const PoseCluster* b)
    return ( a->numVotes > b->numVotes );
 }
 
-int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionThreshold, const double RotationThreshold, const double MinMatchScore, const bool UseWeightedAvg, vector < PPFPose* >& finalPoses)
+int cluster_poses(PPFPose** poseList, const int NumPoses, const double PositionThreshold, const double RotationThreshold, const double MinMatchScore, const bool UseWeightedAvg, vector < PPFPose* >& finalPoses)
 {
 	vector<PoseCluster*> poseClusters;
 	poseClusters.clear();
@@ -607,9 +572,9 @@ int cluster_poses(PPFPose** poseList, const int numPoses, const double PositionT
 	finalPoses.clear();
 
 	// sort the poses for stability
-	qsort(poseList, numPoses, sizeof(PPFPose*), qsort_pose_cmp);
+	qsort(poseList, NumPoses, sizeof(PPFPose*), qsort_pose_cmp);
 
-	for (int i=0; i<numPoses; i++)
+	for (int i=0; i<NumPoses; i++)
 	{
 		PPFPose* pose = poseList[i];
 		bool assigned = false;
@@ -1248,7 +1213,6 @@ int main_synthetic()
 	{
 		// Make a sample pose:
 		double Pose[16]={0};
-		//generate_random_pose(Pose, 0.5);
 		get_random_pose(Pose);
 		printf("Random Pose (Ground Truth):\n");
 		matrix_print(Pose, 4,4);	

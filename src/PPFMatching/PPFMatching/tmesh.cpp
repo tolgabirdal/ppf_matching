@@ -39,6 +39,7 @@
  //
  //M*/
 
+// Author : Tolga Birdal. Please see the notice in tmesh.h
 
 #include <stdio.h> 
 #include <stdlib.h> 

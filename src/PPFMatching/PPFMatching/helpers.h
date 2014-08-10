@@ -40,7 +40,6 @@ extern "C" {
 	cv::Mat transform_pc_pose(cv::Mat pc, double Pose[16]);
 
 	void get_random_pose(double Pose[16]);
-	void generate_random_pose(double Pose[16], double scale);
 	cv::Mat add_noise_pc(cv::Mat pc, double scale);
 
 	int compute_normals_pc_3d(const cv::Mat PC, cv::Mat& PCNormals, const int NumNeighbors, const bool FlipViewpoint, const double viewpoint[3]);

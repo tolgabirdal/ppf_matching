@@ -1,4 +1,10 @@
 
+/* Author: Tolga Birdal
+This file is not intended to be included in the contrib package before the additional 
+code refactoring. However it might be useful for the other developers, so I will be leaving
+this within the package.
+*/
+
 #ifndef __T_PLY__H__
 #define __T_PLY__H__
 

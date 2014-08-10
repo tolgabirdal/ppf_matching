@@ -9,6 +9,7 @@
 #include<stdlib.h>
 #include "THashInt.h"
 
+// This magic value is just
 #define T_HASH_MAGIC 427462442
 
 // default hash function

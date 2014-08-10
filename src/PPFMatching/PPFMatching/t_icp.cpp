@@ -305,17 +305,14 @@ int t_icp_register(const Mat SrcPC, const Mat DstPC, const float Tolerence, cons
 		const double impact = 2;
 		double div = pow((double)2, (double)level);
 		double div2 = div*div;
-		const int numSamples = round((double)(n/(div)));
-		//const double TolP = Tolerence*div2;
+		const int numSamples = cvRound((double)(n/(div)));
 		const double TolP = Tolerence*(double)(level+1)*(level+1);
-		const int MaxIterationsPyr = round((double)MaxIterations/(level+1));
+		const int MaxIterationsPyr = cvRound((double)MaxIterations/(level+1));
 
 		// Obtain the sampled point clouds for this level: Also rotates the normals
 		Mat SrcPC = transform_pc_pose(SrcPC0, Pose);
-		//Mat SrcPC;
-		//move_points(SrcPC0, Pose, SrcPC);
 
-		const int sampleStep = round((double)n/(double)numSamples);
+		const int sampleStep = cvRound((double)n/(double)numSamples);
 		std::vector<int> srcSampleInd;
 
 		/*

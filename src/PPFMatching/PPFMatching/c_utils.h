@@ -32,38 +32,66 @@
 #endif
 
 // Useful Macros
-#define TNorm3(v) (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))
+//#define TNorm3(v) (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))
 
-#define TNormalize3(v)\
+/*#define TNormalize3(v)\
 	double normTemp=TNorm3(v);\
 	if (normTemp>0)\
 {\
 	v[0]/=normTemp;\
 	v[1]/=normTemp;\
 	v[2]/=normTemp;\
-}
+}*/
 
-#define TCross(a, b, c) c[0] = (a[1])*(b[2])-(a[2])*(b[1]); c[1] = (a[2])*(b[0])-(a[0])*(b[2]); c[2] = (a[0])*(b[1])-(a[1])*(b[0]);
+//#define TCross(a, b, c) c[0] = (a[1])*(b[2])-(a[2])*(b[1]); c[1] = (a[2])*(b[0])-(a[0])*(b[2]); c[2] = (a[0])*(b[1])-(a[1])*(b[0]);
 
-#define TDot3(a,b) ((a[0])*(b[0])+(a[1])*(b[1])+(a[2])*(b[2]))
+//#define TDot3(a,b) ((a[0])*(b[0])+(a[1])*(b[1])+(a[2])*(b[2]))
 
-#define TAngle3(a, b, c, f) {\
+/*#define TAngle3(a, b, c, f) {\
 	TCross(a,b,c);\
 	f = (atan2(TNorm3(c), TDot3(a, b)));\
-}
-
-#if defined(_MSC_VER)
-__inline int round(double number)
-{
-	return (number >= 0) ? (int)(number + 0.5) : (int)(number - 0.5);
-}
-#endif
+}*/
 
 #if defined (__cplusplus)
 extern "C" {
 #endif 
 
-	static __inline void matrix_product33(double *A, double *B, double *R)
+	static inline double TNorm3(const double v[])
+	{
+		return (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]));
+	}
+
+	static inline double TNormalize3(double v[])
+	{
+		double normTemp=TNorm3(v);
+		if (normTemp>0)
+		{
+			v[0]/=normTemp;
+			v[1]/=normTemp;
+			v[2]/=normTemp;
+		}
+	}
+
+	static inline double TDot3(const double a[3], const double b[3])
+	{
+		return  ((a[0])*(b[0])+(a[1])*(b[1])+(a[2])*(b[2]));
+	}
+
+	static inline void TCross(const double a[], const double b[], double c[])
+	{
+		c[0] = (a[1])*(b[2])-(a[2])*(b[1]); 
+		c[1] = (a[2])*(b[0])-(a[0])*(b[2]); 
+		c[2] = (a[0])*(b[1])-(a[1])*(b[0]);
+	}
+
+	static inline double TAngle3(const double a[3], const double b[3])
+	{
+		double c[3];
+		TCross(a,b,c);
+		return (atan2(TNorm3(c), TDot3(a, b)));
+	}
+
+	static inline void matrix_product33(double *A, double *B, double *R)
 	{
 		R[0] = A[0] * B[0] + A[1] * B[3] + A[2] * B[6];
 		R[1] = A[0] * B[1] + A[1] * B[4] + A[2] * B[7];
@@ -79,21 +107,21 @@ extern "C" {
 	}
 
 	// A is a vector
-	static __inline void matrix_product133(double *A, double *B, double *R)
+	static inline void matrix_product133(double *A, double *B, double *R)
 	{
 		R[0] = A[0] * B[0] + A[1] * B[3] + A[2] * B[6];
 		R[1] = A[0] * B[1] + A[1] * B[4] + A[2] * B[7];
 		R[2] = A[0] * B[2] + A[1] * B[5] + A[2] * B[8];            
 	}
 
-	static __inline void matrix_product331(const double A[9], const double b[3], double r[3])
+	static inline void matrix_product331(const double A[9], const double b[3], double r[3])
 	{
 		r[0] = A[0] * b[0] + A[1] * b[1] + A[2] * b[2];
 		r[1] = A[3] * b[0] + A[4] * b[1] + A[5] * b[2];
 		r[2] = A[6] * b[0] + A[7] * b[1] + A[8] * b[2];
 	}
 
-	static __inline void matrix_transpose33(double *A, double *At)
+	static inline void matrix_transpose33(double *A, double *At)
 	{
 		At[0] = A[0]; At[4] = A[4]; At[8] = A[8];
 		At[1] = A[3]; At[2] = A[6]; 
@@ -101,7 +129,7 @@ extern "C" {
 		At[6] = A[2]; At[7] = A[5]; 
 	}
 
-	static __inline void matrix_product44(const double A[16], const double B[16], double R[16])
+	static inline void matrix_product44(const double A[16], const double B[16], double R[16])
 	{
 		R[0] = A[0] * B[0] + A[1] * B[4] + A[2] * B[8] + A[3] * B[12];
 		R[1] = A[0] * B[1] + A[1] * B[5] + A[2] * B[9] + A[3] * B[13];
@@ -124,7 +152,7 @@ extern "C" {
 		R[15] = A[12] * B[3] + A[13] * B[7] + A[14] * B[11] + A[15] * B[15];
 	}
 
-	static __inline void matrix_product441(const double A[16], const double B[4], double R[4])
+	static inline void matrix_product441(const double A[16], const double B[4], double R[4])
 	{
 		R[0] = A[0] * B[0] + A[1] * B[1] + A[2] * B[2] + A[3] * B[3];
 		R[1] = A[4] * B[0] + A[5] * B[1] + A[6] * B[2] + A[7] * B[3];
@@ -132,7 +160,7 @@ extern "C" {
 		R[3] = A[12] * B[0] + A[13] * B[1] + A[14] * B[2] + A[15] * B[3];
 	}
 
-	static __inline void matrix_print(double *A, int m, int n) 
+	static inline void matrix_print(double *A, int m, int n) 
 	{
 		int i, j;
 
@@ -145,7 +173,7 @@ extern "C" {
 		}
 	}
 
-	static __inline void matrix_ident(int n, double *A) {
+	static inline void matrix_ident(int n, double *A) {
 		int i, j;
 
 		for (i = 0; i < n*n; i++) {
@@ -157,7 +185,7 @@ extern "C" {
 		}
 	}
 
-	static __inline void rt_to_pose(const double R[9], const double t[3], double Pose[16])
+	static inline void rt_to_pose(const double R[9], const double t[3], double Pose[16])
 	{
 		Pose[0]=R[0];
 		Pose[1]=R[1];
@@ -176,7 +204,7 @@ extern "C" {
 	}
 
 
-	static __inline void pose_to_rt(const double Pose[16], double R[9], double t[3])
+	static inline void pose_to_rt(const double Pose[16], double R[9], double t[3])
 	{
 		R[0] = Pose[0];
 		R[1] = Pose[1];
@@ -193,7 +221,7 @@ extern "C" {
 		t[2]=Pose[11];
 	}
 
-	static __inline void pose_to_r(const double Pose[16], double R[9])
+	static inline void pose_to_r(const double Pose[16], double R[9])
 	{
 		R[0] = Pose[0];
 		R[1] = Pose[1];
@@ -207,13 +235,13 @@ extern "C" {
 	}
 
 
-	/*static __inline int next_power_of_two(int x)
+	/*static inline int next_power_of_two(int x)
 	{
 	return (int)pow(2.0, ceil(log((double)x)/log(2.0)));;
 	}*/
 
 
-	static __inline void aa_to_R_yz(double angle, const double r[3], double row2[3], double row3[3])
+	static inline void aa_to_R_yz(double angle, const double r[3], double row2[3], double row3[3])
 	{
 		const double sinA=sin(angle);
 		const double cosA=cos(angle);
@@ -231,7 +259,7 @@ extern "C" {
 		row3[0] += r[2] * r[0] * cos1A;  row3[1] += r[2] * r[1] * cos1A; row3[2] += r[2] * r[2] * cos1A;
 	}
 
-	static __inline void aa_to_R(double angle, const double r[3], double R[9])
+	static inline void aa_to_R(double angle, const double r[3], double R[9])
 	{
 		const double sinA=sin(angle);
 		const double cosA=cos(angle);
@@ -256,7 +284,7 @@ extern "C" {
 		row3[0] += r[2] * r[0] * cos1A;  row3[1] += r[2] * r[1] * cos1A; row3[2] += r[2] * r[2] * cos1A;
 	}
 
-	static __inline void get_unit_x_rotation(double angle, double R[9])
+	static inline void get_unit_x_rotation(double angle, double R[9])
 	{
 		const double sinA=sin(angle);
 		const double cosA=cos(angle);
@@ -269,7 +297,7 @@ extern "C" {
 		row3[0] =  0.f;  row3[1] =  sinA; row3[2] = cosA; 
 	}
 
-	static __inline void get_unit_x_rotation_44(double angle, double T[16])
+	static inline void get_unit_x_rotation_44(double angle, double T[16])
 	{
 		const double sinA=sin(angle);
 		const double cosA=cos(angle);
@@ -286,7 +314,7 @@ extern "C" {
 	}
 
 	// compute the yz components of the transformation needed to rotate n1 onto x axis and p1 to origin
-	static __inline void compute_transform_rt_yz(const double p1[4], const double n1[4], double row2[3], double row3[3], double t[3])
+	static inline void compute_transform_rt_yz(const double p1[4], const double n1[4], double row2[3], double row3[3], double t[3])
 	{
 		// dot product with x axis
 		double angle=acos( n1[0] );
@@ -318,7 +346,7 @@ extern "C" {
 	}
 
 	// compute the transformation needed to rotate n1 onto x axis and p1 to origin
-	static __inline void compute_transform_rt(const double p1[4], const double n1[4], double R[9], double t[3])
+	static inline void compute_transform_rt(const double p1[4], const double n1[4], double R[9], double t[3])
 	{
 		// dot product with x axis
 		double angle=acos( n1[0] );
@@ -354,7 +382,7 @@ extern "C" {
 		t[2] = row3[0] * (-p1[0]) + row3[1] * (-p1[1]) + row3[2] * (-p1[2]);
 	}
 
-	static __inline void flip_normal_viewpoint(const float* point, double vp_x, double vp_y, double vp_z, double *nx, double *ny, double *nz)
+	static inline void flip_normal_viewpoint(const float* point, double vp_x, double vp_y, double vp_z, double *nx, double *ny, double *nz)
 	{
 		double cos_theta;
 
@@ -375,7 +403,7 @@ extern "C" {
 		}
 	}
 
-	static __inline void flip_normal_viewpoint_32f(const float* point, float vp_x, float vp_y, float vp_z, float *nx, float *ny, float *nz)
+	static inline void flip_normal_viewpoint_32f(const float* point, float vp_x, float vp_y, float vp_z, float *nx, float *ny, float *nz)
 	{
 		float cos_theta;
 
@@ -397,7 +425,7 @@ extern "C" {
 	}
 
 
-	static __inline void matrix_to_axis_angle(double *R, double *axis, double *angle)
+	static inline void matrix_to_axis_angle(double *R, double *axis, double *angle)
 	{
 		double d1 = R[7] - R[5];
 		double d2 = R[2] - R[6];
@@ -415,9 +443,9 @@ extern "C" {
 		axis[2] = z;
 	}
 
-	static __inline void axis_angle_to_matrix(double *axis, double angle, double *R)
+	static inline void axis_angle_to_matrix(double *axis, double angle, double *R)
 	{
-		double ident[9];
+		double ident[9]={1,0,0,0,1,0,0,0,1};
 		double n[9] = { 0.0, -axis[2], axis[1],
 			axis[2], 0.0, -axis[0],
 			-axis[1], axis[0], 0.0 };
@@ -430,7 +458,6 @@ extern "C" {
 		c = cos(angle);
 		s = sin(angle);
 
-		matrix_ident(3, ident);
 		matrix_product33(n, n, nsq);
 
 		for (i = 0; i < 9; i++)
@@ -446,7 +473,7 @@ extern "C" {
 		//matrix_sum(3, 3, 3, 3, tmp, cnsq, R);
 	}
 
-	static __inline void matrix_to_quaternion(double *R, double *q) 
+	static inline void matrix_to_quaternion(double *R, double *q) 
 	{
 		double n4; // the norm of quaternion multiplied by 4 
 		double tr = R[0] + R[4] + R[8]; // trace of martix
@@ -485,7 +512,7 @@ extern "C" {
 		q[3] *= factor;
 	}
 
-	static __inline void quaternion_to_matrix(double *q, double *R)
+	static inline void quaternion_to_matrix(double *q, double *R)
 	{
 		double sqw = q[0] * q[0];
 		double sqx = q[1] * q[1]; 
@@ -518,7 +545,7 @@ extern "C" {
 	}
 
 
-	static __inline int t_eigen_33_lowest(const double C[3][3], double A[3])
+	static inline void t_eigen_33_lowest(const double C[3][3], double A[3])
 	{
 		const double a = C[0][0];
 		const double b = C[0][1];

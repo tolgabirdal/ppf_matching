@@ -183,7 +183,19 @@
 				>
 			</File>
 			<File
-				RelativePath=".\main.cpp"
+				RelativePath=".\icp.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\main_cv.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Pose3D.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ppf_match_3d.cpp"
 				>
 			</File>
 			<File
@@ -230,6 +242,18 @@
 			</File>
 			<File
 				RelativePath=".\helpers.h"
+				>
+			</File>
+			<File
+				RelativePath=".\icp.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Pose3D.hpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ppf_match_3d.hpp"
 				>
 			</File>
 			<File
