@@ -31,27 +31,6 @@
 #define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #endif
 
-// Useful Macros
-//#define TNorm3(v) (sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))
-
-/*#define TNormalize3(v)\
-	double normTemp=TNorm3(v);\
-	if (normTemp>0)\
-{\
-	v[0]/=normTemp;\
-	v[1]/=normTemp;\
-	v[2]/=normTemp;\
-}*/
-
-//#define TCross(a, b, c) c[0] = (a[1])*(b[2])-(a[2])*(b[1]); c[1] = (a[2])*(b[0])-(a[0])*(b[2]); c[2] = (a[0])*(b[1])-(a[1])*(b[0]);
-
-//#define TDot3(a,b) ((a[0])*(b[0])+(a[1])*(b[1])+(a[2])*(b[2]))
-
-/*#define TAngle3(a, b, c, f) {\
-	TCross(a,b,c);\
-	f = (atan2(TNorm3(c), TDot3(a, b)));\
-}*/
-
 #if defined (__cplusplus)
 extern "C" {
 #endif 
@@ -174,7 +153,7 @@ extern "C" {
 	}
 
 	static inline void matrix_ident(int n, double *A) {
-		int i, j;
+		int i;
 
 		for (i = 0; i < n*n; i++) {
 			A[i] = 0.0;
@@ -450,7 +429,7 @@ extern "C" {
 			axis[2], 0.0, -axis[0],
 			-axis[1], axis[0], 0.0 };
 
-		double nsq[9], sn[9], cnsq[9], tmp[9];
+		double nsq[9];
 		double c, s;
 		int i;
 
@@ -467,6 +446,8 @@ extern "C" {
 			R[i]=ident[i]+sni+cnsqi;
 		}
 
+		// The below code is the matrix based implemntation of the above
+		// double nsq[9], sn[9], cnsq[9], tmp[9];
 		//matrix_scale(3, 3, n, s, sn);
 		//matrix_scale(3, 3, nsq, (1 - c), cnsq);
 		//matrix_sum(3, 3, 3, 3, ident, sn, tmp);

@@ -1,6 +1,6 @@
 
-#ifndef __OPENCV_3DDETECT_PPF_HPP__
-#define __OPENCV_3DDETECT_PPF_HPP__
+#ifndef __OPENCV_OBJDETECT_PPF_3D_HPP__
+#define __OPENCV_OBJDETECT_PPF_3D_HPP__
 
 #include "THashInt.h"
 #include <stdio.h>
@@ -15,7 +15,7 @@
   #include <opencv2/core/core.hpp>
 #endif
 
-#include "helpers.h"
+#include "ppf_helpers.hpp"
 #include "c_utils.h"
 #include "Pose3D.hpp"
 #include <vector>
@@ -90,7 +90,7 @@ namespace cv
 			int trainModel(const Mat& Model);
 
 			//int matchModel(const Mat Scene, const double samplingStepRelative, const double distanceStepRelative, const double angleStepRelative);
-			void match(const Mat& pc, vector < Pose3D* >& results, const double RelativeSceneSampleStep=1.0/5.0, const double RelativeSceneDistance=0.03);
+			void match(const Mat& Scene, vector < Pose3D* >& results, const double RelativeSceneSampleStep=1.0/5.0, const double RelativeSceneDistance=0.03);
 
 			void read(const FileNode& fn);
 			void write(FileStorage& fs) const;

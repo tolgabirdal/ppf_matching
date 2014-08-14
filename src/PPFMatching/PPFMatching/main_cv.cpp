@@ -1,5 +1,5 @@
 
-#include "t_icp.h"
+//#include "t_icp.h"
 #include "tmesh.h"
 #include "ppf_match_3d.hpp"
 #include "icp.hpp"
@@ -15,7 +15,8 @@ int main()
 {
 	int numVert ;
 
-	const char* fn = "../../../data/kinect/model/Frog_ascii2.ply";
+	//const char* fn = "../../../data/kinect/model/Frog_ascii2.ply";
+	const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
 
 	TMesh* mesh = 0;
 	read_mesh_ply(&mesh, fn);
@@ -44,7 +45,7 @@ int main()
 	detector.match(pcTest, results, 1.0/5.0,0.03);
 	//t_match_pc_ppf(pcTest, 15, 5, 0.03, ppfModel, results);
 	tick2 = cv::getTickCount();
-	printf("PPF Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
+	printf("\nPPF Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
 
 	printf("Estimated Poses:\n");
 
@@ -53,16 +54,17 @@ int main()
 	int64 t1 = cv::getTickCount();
 //	icp.registerModelToScene(pc, pcTest, results);
 	float residualOutput = 0;
-	//icp.registerModelToScene(pc, pcTest, results);
+	icp.registerModelToScene(pc, pcTest, results);
 	int64 t2 = cv::getTickCount();
 
 	printf("Elapsed Time: %f\n\n", (double)(t2-t1)/cv::getTickFrequency());
 
 	// debug first five poses
-	for (int i=0; i<std::min(static_cast<unsigned int>(10), results.size()); i++)
+	for (int i=0; i<std::min(static_cast<size_t>(10), results.size()); i++)
 	{
 		Pose3D* pose = results[i];
 
+		printf("Pose Result %d:\n");
 		pose->print_pose();
 
 		Mat pct = transform_pc_pose(pc, pose->Pose);

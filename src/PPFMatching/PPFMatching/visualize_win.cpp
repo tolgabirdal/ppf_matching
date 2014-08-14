@@ -1,10 +1,11 @@
 
 #include "WindowGL.h"
 #include "visualize_win.h"
-#include "helpers.h"
+#include "ppf_helpers.hpp"
 //#include "gl_utils.h"
 
 using namespace cv;
+using namespace cv::ppf_match_3d;
 
 typedef struct
 {
@@ -15,10 +16,10 @@ typedef struct
 	int withNormals, withBbox, withOctree;
 }TWindowData;
 
-static float light_diffuse[] = {100, 100, 100, 100.0f}; 
-static float light_position[] = {-100.0, 100.0, 1.0, 0.0};
-static float amb[] =  {0.24, 0.24, 0.24, 0.0};
-static float dif[] =  {1.0, 1.0, 1.0, 0.0};
+static float light_diffuse[] = {100.0f, 100.0f, 100.0f, 100.0f}; 
+static float light_position[] = {-100.0f, 100.0f, 1.0f, 0.0f};
+static float amb[] =  {0.24f, 0.24f, 0.24f, 0.0f};
+static float dif[] =  {1.0f, 1.0f, 1.0f, 0.0f};
 
 
 void draw_cube(float center_x, float center_y, float center_z, float size)
@@ -94,9 +95,9 @@ void draw_cube(float center_x, float center_y, float center_z, float size)
 
 void draw_prism(float center_x, float center_y, float center_z, float sizex, float sizey, float sizez)
 {
-    float half_sizex = sizex / 2.0;
-    float half_sizey = sizey / 2.0;
-    float half_sizez = sizez / 2.0;
+    float half_sizex = sizex / 2.0f;
+    float half_sizey = sizey / 2.0f;
+    float half_sizez = sizez / 2.0f;
     float front     = center_z - half_sizez;
     float back      = center_z + half_sizez;
     float left      = center_x - half_sizex;
@@ -226,9 +227,9 @@ int display(void* UserData)
 	pc.col(1).copyTo(y);
 	pc.col(2).copyTo(z);
 
-	float cx = cv::mean(x).val[0];
-	float cy = cv::mean(y).val[0];
-	float cz = cv::mean(z).val[0];
+	float cx = (float) cv::mean(x).val[0];
+	float cy = (float) cv::mean(y).val[0];
+	float cz = (float) cv::mean(z).val[0];
 
 	cv::minMaxIdx(pc, &minVal, &maxVal);
 

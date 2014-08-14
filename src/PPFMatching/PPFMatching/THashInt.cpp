@@ -241,7 +241,7 @@ int hashtable_int_write(const hashtable_int * hashtbl, const size_t dataSize, FI
 		node=hashtbl->nodes[i];
 		while(node) 
 		{
-			fwrite(node->key, sizeof(KeyType), 1, f);
+			fwrite(&node->key, sizeof(KeyType), 1, f);
 			fwrite(&node->data, dataSize, 1, f);
 			node=node->next;
 		}
@@ -305,7 +305,7 @@ hashtable_int *hashtable_int_read(FILE* f)
 					fread(&data, dataSize, 1, f);
 	
 				hashtable_int_insert(hashtbl, key, data);
-				free(key);
+				//free(key);
 			}
 		}
 	}

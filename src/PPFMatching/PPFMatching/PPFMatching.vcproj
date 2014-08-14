@@ -12,6 +12,9 @@
 		<Platform
 			Name="Win32"
 		/>
+		<Platform
+			Name="x64"
+		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
@@ -169,6 +172,161 @@
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
+		<Configuration
+			Name="Debug|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="C:\Users\tolga\Documents\GitHub\opencv\modules\contrib\include;C:\Users\tolga\Documents\GitHub\opencv\modules\imgproc\include;C:\Users\tolga\Documents\GitHub\opencv\modules\core\include;C:\Users\tolga\Documents\GitHub\opencv\modules\highgui\include;C:\Users\tolga\Documents\GitHub\opencv\modules\nonfree\include;C:\Users\tolga\Documents\GitHub\opencv\modules\features2d\include;C:\Users\tolga\Documents\GitHub\opencv\modules\flann\include;./includes;C:\Users\tolga\Documents\GitHub\opencv\modules\calib3d\include;C:\Users\tolga\Documents\GitHub\opencv_contrib\modules\rgbd\include;C:\Users\tolga\Dropbox\Projects\eigen;C:\Users\tolga\Documents\GitHub\opencv\modules\viz\include;C:\Users\tolga\Documents\GitHub\ppf_matching\src\PPFMatching\PPFMatching\visualizations\vtk"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;FLANN_STATIC"
+				MinimalRebuild="true"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				OpenMP="false"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="flann_sd.lib opengl32.lib glu32.lib tommyhash.lib opencv_core300d.lib opencv_flann300d.lib opencv_imgproc300d.lib opencv_highgui300d.lib opencv_nonfree300d.lib opencv_features2d300d.lib opencv_calib3d300d.lib opencv_contrib300d.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="C:\Users\tolga\Documents\GitHub\opencv\bin\lib\Debug;./libs"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="1"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="C:\Users\tolga\Documents\GitHub\opencv\modules\contrib\include;C:\Users\tolga\Documents\GitHub\opencv\modules\imgproc\include;C:\Users\tolga\Documents\GitHub\opencv\modules\core\include;C:\Users\tolga\Documents\GitHub\opencv\modules\highgui\include;C:\Users\tolga\Documents\GitHub\opencv\modules\nonfree\include;C:\Users\tolga\Documents\GitHub\opencv\modules\features2d\include;C:\Users\tolga\Documents\GitHub\opencv\modules\flann\include;./includes;C:\Users\tolga\Documents\GitHub\opencv\modules\calib3d\include;C:\Users\tolga\Documents\GitHub\opencv_contrib\modules\rgbd\include;C:\Users\tolga\Dropbox\Projects\eigen;C:\Users\tolga\Documents\GitHub\opencv\modules\viz\include;C:\Users\tolga\Documents\GitHub\ppf_matching\src\PPFMatching\PPFMatching\visualizations\vtk"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;FLANN_STATIC;T_OPENMP"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				OpenMP="true"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="flann_s.lib opengl32.lib glu32.lib tommyhash.lib opencv_core300.lib opencv_imgproc300.lib opencv_flann300.lib opencv_highgui300.lib opencv_nonfree300.lib opencv_features2d300.lib opencv_calib3d300.lib opencv_contrib300.lib flann_s.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="C:\Users\tolga\Documents\GitHub\opencv\bin\lib\Release;./libs"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
 	</Configurations>
 	<References>
 	</References>
@@ -178,10 +336,6 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
-			<File
-				RelativePath=".\helpers.cpp"
-				>
-			</File>
 			<File
 				RelativePath=".\icp.cpp"
 				>
@@ -195,6 +349,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ppf_helpers.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ppf_match_3d.cpp"
 				>
 			</File>
@@ -203,11 +361,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\t_icp.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\THashInt.c"
+				RelativePath=".\THashInt.cpp"
 				>
 			</File>
 			<File
@@ -241,10 +395,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\helpers.h"
-				>
-			</File>
-			<File
 				RelativePath=".\icp.hpp"
 				>
 			</File>
@@ -253,15 +403,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ppf_helpers.hpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ppf_match_3d.hpp"
 				>
 			</File>
 			<File
-				RelativePath=".\rply.h"
+				RelativePath=".\precomp.hpp"
 				>
 			</File>
 			<File
-				RelativePath=".\t_icp.h"
+				RelativePath=".\rply.h"
 				>
 			</File>
 			<File

@@ -149,6 +149,7 @@ namespace cv
 			fwrite(Pose, sizeof(double)*16, 1, f);
 			fwrite(t, sizeof(double)*3, 1, f);
 			fwrite(q, sizeof(double)*4, 1, f);
+			fwrite(&residual, sizeof(double), 1, f);
 			return 0;
 		}
 
@@ -165,15 +166,16 @@ namespace cv
 				fread(Pose, sizeof(double)*16, 1, f);
 				fread(t, sizeof(double)*3, 1, f);
 				fread(q, sizeof(double)*4, 1, f);
+				fread(&residual, sizeof(double), 1, f);
 				return 0;
 			}
 
 			return -1;
 		}
 
-		int Pose3D::write_pose(const char* FileName)
+		int Pose3D::write_pose(const std::string& FileName)
 		{
-			FILE* f = fopen(FileName, "wb");
+			FILE* f = fopen(FileName.c_str(), "wb");
 
 			if (!f)
 				return -1;
@@ -184,9 +186,9 @@ namespace cv
 			return status;
 		}
 
-		int Pose3D::read_pose(const char* FileName)
+		int Pose3D::read_pose(const std::string& FileName)
 		{
-			FILE* f = fopen(FileName, "rb");
+			FILE* f = fopen(FileName.c_str(), "rb");
 
 			if (!f)
 				return -1;
@@ -242,9 +244,9 @@ namespace cv
 			}
 		}
 
-		int PoseCluster3D::write_pose_cluster(const char* FileName)
+		int PoseCluster3D::write_pose_cluster(const std::string& FileName)
 		{
-			FILE* f = fopen(FileName, "wb");
+			FILE* f = fopen(FileName.c_str(), "wb");
 
 			if (!f)
 				return -1;
@@ -255,9 +257,9 @@ namespace cv
 			return status;
 		}
 
-		int PoseCluster3D::read_pose_cluster(const char* FileName)
+		int PoseCluster3D::read_pose_cluster(const std::string& FileName)
 		{
-			FILE* f = fopen(FileName, "rb");
+			FILE* f = fopen(FileName.c_str(), "rb");
 
 			if (!f)
 				return -1;

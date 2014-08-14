@@ -28,6 +28,7 @@ namespace cv
 				alpha = Alpha;
 				modelIndex = ModelIndex;
 				numVotes = NumVotes;
+				residual=0;
 
 				for (int i=0; i<16; i++)
 					Pose[i]=0;
@@ -43,8 +44,8 @@ namespace cv
 
 			int write_pose(FILE* f);
 			int read_pose(FILE* f);
-			int write_pose(const char* FileName);
-			int read_pose(const char* FileName);
+			int write_pose(const std::string& FileName);
+			int read_pose(const std::string& FileName);
 
 			~Pose3D(){};
 
@@ -90,8 +91,8 @@ namespace cv
 			void add_pose(Pose3D* newPose) ;
 			int write_pose_cluster(FILE* f);
 			int read_pose_cluster(FILE* f);
-			int write_pose_cluster(const char* FileName);
-			int read_pose_cluster(const char* FileName);
+			int write_pose_cluster(const std::string& FileName);
+			int read_pose_cluster(const std::string& FileName);
 
 			std::vector < Pose3D* > poseList;
 			int numVotes;

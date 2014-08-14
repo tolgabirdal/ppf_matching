@@ -10,7 +10,6 @@
 //-----------------------------------------------------------------------------
 // Platform-specific functions and macros
 
-// Microsoft Visual Studio
 
 #ifndef __HASH_MURMUR_H_
 #define __HASH_MURMUR_H_
@@ -29,8 +28,6 @@
 // Other compilers
 
 #else   // defined(_MSC_VER)
-
-//#define long long TLong
 
 #define FORCE_INLINE __attribute__((always_inline))
 

@@ -1,5 +1,5 @@
 
-//#include "precomp.hpp"
+#include "precomp.hpp"
 #include "ppf_match_3d.hpp"
 #include "hash_murmur.h"
 
@@ -141,6 +141,8 @@ namespace cv
 		// TODO: Check all step sizes to be positive
 		int PPF3DDetector::trainModel(const Mat &PC)
 		{
+			CV_Assert(PC.type() == CV_32F || PC.type() == CV_32FC1);
+
 			const int numPoints = PC.rows;
 
 			// compute bbox
@@ -155,7 +157,6 @@ namespace cv
 
 			float distanceStep = diameter * samplingStepRelative;
 
-			//Mat sampled = sample_pc_octree(PC, xRange, yRange, zRange, samplingStepRelative);
 			Mat sampled = sample_pc_by_quantization(PC, xRange, yRange, zRange, samplingStepRelative,1);
 
 			//int size = next_power_of_two(sampled.rows*sampled.rows);
@@ -242,7 +243,7 @@ namespace cv
 			double dv[3] = {targetPose.t[0]-sourcePose.t[0], targetPose.t[1]-sourcePose.t[1], targetPose.t[2]-sourcePose.t[2]};
 			double dNorm = sqrt(dv[0]*dv[0]+dv[1]*dv[1]+dv[2]*dv[2]);
 
-			const double phi = abs ( sourcePose.angle - targetPose.angle );
+			const double phi = fabs ( sourcePose.angle - targetPose.angle );
 
 			return (phi<this->RotationThreshold && dNorm < this->PositionThreshold);
 		}
@@ -401,6 +402,8 @@ namespace cv
 				throw cv::Exception(cv::Error::StsError, "The model is not trained. Cannot match without training", __FUNCTION__, __FILE__, __LINE__);
 			}
 
+			CV_Assert(pc.type() == CV_32F || pc.type() == CV_32FC1);
+
 			SceneSampleStep = 1.0/RelativeSceneSampleStep;
 
 			//cvflann::Matrix<float> data;
@@ -427,9 +430,8 @@ namespace cv
 			float dy = yRange[1] - yRange[0];
 			float dz = zRange[1] - zRange[0];
 			float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
-			float distanceSampleStep = diameter * samplingStepRelative;
-			//Mat sampled = sample_pc_octree(pc, xRange, yRange, zRange, samplingStepRelative);
-			Mat sampled = sample_pc_by_quantization(pc, xRange, yRange, zRange, samplingStepRelative,1);
+			float distanceSampleStep = diameter * RelativeSceneDistance;
+			Mat sampled = sample_pc_by_quantization(pc, xRange, yRange, zRange, RelativeSceneDistance,1);
 			
 			// allocate the accumulator
 #if !defined (T_OPENMP)

@@ -43,10 +43,12 @@
 
 // Author: Tolga Birdal
 
+#include "precomp.hpp"
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <math.h>
-#include "helpers.h"
+#include "ppf_helpers.hpp"
 //#include "c_utils.h"
 #include "Pose3D.hpp"
 #include "icp.hpp"
@@ -126,7 +128,6 @@ namespace cv
 		}
 
 		// From numerical receipes: Finds the median of an array
-#define ELEM_SWAP_F(a,b) { float temp=(a);(a)=(b);(b)=temp; }
 		static float median_F(float arr[], int n) 
 		{
 			int low, high ;
@@ -140,18 +141,18 @@ namespace cv
 
 				if (high == low + 1) {  /* Two elements only */
 					if (arr[low] > arr[high])
-						ELEM_SWAP_F(arr[low], arr[high]) ;
+						std::swap(arr[low], arr[high]) ;
 					return arr[median] ;
 				}
 
 				/* Find median of low, middle and high items; swap into position low */
 				middle = (low + high) >>1;
-				if (arr[middle] > arr[high])    ELEM_SWAP_F(arr[middle], arr[high]) ;
-				if (arr[low] > arr[high])       ELEM_SWAP_F(arr[low], arr[high]) ;
-				if (arr[middle] > arr[low])     ELEM_SWAP_F(arr[middle], arr[low]) ;
+				if (arr[middle] > arr[high])    std::swap(arr[middle], arr[high]) ;
+				if (arr[low] > arr[high])       std::swap(arr[low], arr[high]) ;
+				if (arr[middle] > arr[low])     std::swap(arr[middle], arr[low]) ;
 
 				/* Swap low item (now in position middle) into position (low+1) */
-				ELEM_SWAP_F(arr[middle], arr[low+1]) ;
+				std::swap(arr[middle], arr[low+1]) ;
 
 				/* Nibble from each end towards middle, swapping items when stuck */
 				ll = low + 1;
@@ -163,11 +164,11 @@ namespace cv
 					if (hh < ll)
 						break;
 
-					ELEM_SWAP_F(arr[ll], arr[hh]) ;
+					std::swap(arr[ll], arr[hh]) ;
 				}
 
 				/* Swap middle item (in position low) back into correct position */
-				ELEM_SWAP_F(arr[low], arr[hh]) ;
+				std::swap(arr[low], arr[hh]) ;
 
 				/* Re-set active partition */
 				if (hh <= median)
@@ -300,12 +301,11 @@ namespace cv
 		*/
 		static hashtable_int* get_hashtable(int* data, int length, int numMaxElement)
 		{
-			hashtable_int* hashtable = hashtable_int_create(numMaxElement*2, 0);
+			hashtable_int* hashtable = hashtable_int_create(static_cast<size_t>(numMaxElement*2), 0);
 			for(int i = 0; i < length; i++)
 			{
-				const int key = data[i];
-
-				hashtable_int_insert_hashed(hashtable, key+1, (void*)(i+1));
+				const KeyType key = (KeyType)data[i];
+				hashtable_int_insert_hashed(hashtable, key+1, reinterpret_cast<void*>(i+1));
 			}
 
 			return hashtable;
@@ -333,8 +333,10 @@ namespace cv
 
 			double scale = (double)n / ((distSrc + distDst)*0.5);
 
-			SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) = (SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) )  * scale;
-			DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) = (DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) )  * scale;
+			//SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) = (SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) )  * scale;
+			//DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) = (DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) )  * scale;
+			SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) *= scale;
+			DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) *= scale;
 
 			Mat SrcPC0 = SrcTemp;
 			Mat DstPC0 = DstTemp;
