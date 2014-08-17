@@ -345,7 +345,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Pose3D.cpp"
+				RelativePath=".\pose_3d.cpp"
 				>
 			</File>
 			<File
@@ -413,7 +413,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Pose3D.hpp"
+				RelativePath=".\pose_3d.hpp"
 				>
 			</File>
 			<File

@@ -9,7 +9,7 @@
 #include <opencv2/core/core.hpp>
 #endif
 
-#include "Pose3D.hpp"
+#include "pose_3d.hpp"
 #include "c_utils.hpp"
 #include <vector>
 
@@ -105,9 +105,6 @@ namespace cv
 			int NumNeighborsCorr;
 			int NumLevels;
 			int SampleType;
-
-
-			
 
 		};
 	}

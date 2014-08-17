@@ -50,7 +50,7 @@
 #include <math.h>
 #include "ppf_helpers.hpp"
 //#include "c_utils.hpp"
-#include "Pose3D.hpp"
+#include "pose_3d.hpp"
 #include "icp.hpp"
 #include "t_hash_int.hpp"
 
@@ -560,11 +560,11 @@ namespace cv
 		{
 			for (int i=0; i<Poses.size(); i++)
 			{
-				double Pose[16]={0};
+				double PoseICP[16]={0};
 				Mat SrcTemp = SrcPC.clone();
 				transform_pc_pose(SrcTemp, Poses[i]->Pose);
-				registerModelToScene(SrcTemp, DstPC, Poses[i]->residual, Pose);
-				Poses[i]->append_pose(Pose);
+				registerModelToScene(SrcTemp, DstPC, Poses[i]->residual, PoseICP);
+				Poses[i]->append_pose(PoseICP);
 				//Poses[i]->update_pose(Pose);
 			}
 

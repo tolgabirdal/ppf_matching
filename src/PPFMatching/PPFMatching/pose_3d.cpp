@@ -8,7 +8,7 @@
   #include <opencv2/core/core.hpp>
 #endif
 
-#include "Pose3D.hpp"
+#include "pose_3d.hpp"
 
 using namespace std;
 
@@ -45,7 +45,7 @@ namespace cv
 		{
 			double R[9], PoseFull[16]={0};
 
-			matrix_product44(this->Pose, IncrementalPose,PoseFull);
+			matrix_product44(IncrementalPose,this->Pose, PoseFull);
 
 			R[0] = PoseFull[0];	R[1] = PoseFull[1]; R[2] = PoseFull[2];
 			R[3] = PoseFull[4];	R[4] = PoseFull[5]; R[5] = PoseFull[6];
