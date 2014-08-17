@@ -49,10 +49,10 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <math.h>
 #include "ppf_helpers.hpp"
-//#include "c_utils.h"
+//#include "c_utils.hpp"
 #include "Pose3D.hpp"
 #include "icp.hpp"
-#include "THashInt.h"
+#include "t_hash_int.hpp"
 
 using namespace std;
 using namespace cv;
@@ -565,6 +565,7 @@ namespace cv
 				transform_pc_pose(SrcTemp, Poses[i]->Pose);
 				registerModelToScene(SrcTemp, DstPC, Poses[i]->residual, Pose);
 				Poses[i]->append_pose(Pose);
+				//Poses[i]->update_pose(Pose);
 			}
 
 			return 0;

@@ -3,7 +3,7 @@
 #define _OPENCV_POSE3D_HPP_
 
 #include <vector>
-#include "c_utils.h"
+#include "c_utils.hpp"
 
 namespace cv 
 {
@@ -60,14 +60,14 @@ namespace cv
 		public:
 			PoseCluster3D() 
 			{
-				poseList.clear();
+				//poseList.clear();
 				numVotes=0;
 				id=0;
 			};
 
 			PoseCluster3D(Pose3D* newPose) 
 			{
-				poseList.clear();
+				//poseList.clear();
 				poseList.push_back(newPose);
 				numVotes=newPose->numVotes;
 				id=0;
@@ -75,7 +75,7 @@ namespace cv
 
 			PoseCluster3D(Pose3D* newPose, int id) 
 			{
-				poseList.clear();
+				//poseList.clear();
 				poseList.push_back(newPose);
 				this->numVotes = newPose->numVotes;
 				this->id = id;
@@ -85,7 +85,7 @@ namespace cv
 			{
 				numVotes=0;
 				id=0;
-				poseList.clear();
+				//poseList.clear();
 			};
 
 			void add_pose(Pose3D* newPose) ;

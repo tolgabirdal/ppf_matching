@@ -1,4 +1,5 @@
 
+#include "precomp.hpp"
 
 #include <opencv2/core/version.hpp>
 #if CV_MAJOR_VERSION > 2
@@ -44,7 +45,7 @@ namespace cv
 		{
 			double R[9], PoseFull[16]={0};
 
-			matrix_product44(IncrementalPose, this->Pose, PoseFull);
+			matrix_product44(this->Pose, IncrementalPose,PoseFull);
 
 			R[0] = PoseFull[0];	R[1] = PoseFull[1]; R[2] = PoseFull[2];
 			R[3] = PoseFull[4];	R[4] = PoseFull[5]; R[5] = PoseFull[6];
@@ -242,6 +243,8 @@ namespace cv
 				poseList[i] = new Pose3D();
 				poseList[i]->read_pose(f);
 			}
+
+			return 0;
 		}
 
 		int PoseCluster3D::write_pose_cluster(const std::string& FileName)

@@ -2,7 +2,7 @@
 #ifndef __OPENCV_OBJDETECT_PPF_3D_HPP__
 #define __OPENCV_OBJDETECT_PPF_3D_HPP__
 
-#include "THashInt.h"
+#include "t_hash_int.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -16,7 +16,7 @@
 #endif
 
 #include "ppf_helpers.hpp"
-#include "c_utils.h"
+#include "c_utils.hpp"
 #include "Pose3D.hpp"
 #include <vector>
 
@@ -132,7 +132,7 @@ namespace cv
 				return ( a->numVotes > b->numVotes );
 			}
 
-			void clear_trainin_models();
+			void clear_training_models();
 
 		private:
 			void compute_ppf_features(	const double p1[4], const double n1[4],
@@ -147,8 +147,7 @@ namespace cv
 
 			bool trained;
 		};
-
-	}
-}
+	};
+};
 
 #endif

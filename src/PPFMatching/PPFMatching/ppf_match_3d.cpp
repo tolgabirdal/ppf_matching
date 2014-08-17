@@ -1,11 +1,12 @@
 
 #include "precomp.hpp"
 #include "ppf_match_3d.hpp"
-#include "hash_murmur.h"
+#include "hash_murmur.hpp"
 
 #if defined (T_OPENMP)
 #include<omp.h>
 #endif
+
 
 namespace cv 
 {
@@ -118,7 +119,7 @@ namespace cv
 			f[2] = TAngle3(n1, n2);
 		}
 
-		void PPF3DDetector::clear_trainin_models()
+		void PPF3DDetector::clear_training_models()
 		{
 			if (this->hash_nodes)
 			{
@@ -135,7 +136,7 @@ namespace cv
 
 		PPF3DDetector::~PPF3DDetector()
 		{
-			clear_trainin_models();
+			clear_training_models();
 		}
 
 		// TODO: Check all step sizes to be positive
@@ -457,10 +458,10 @@ namespace cv
 				double p1t[4];
 				double *row1, *row2, *row3, tsg[3]={0}, Rsg[9]={0}, RInv[9]={0};
 
-#if defined (T_OPENMP)
+//#if defined (T_OPENMP)
 				unsigned int* accumulator = (unsigned int*)calloc(numAngles*n, sizeof(unsigned int));
 				//printf("In thread: %d\n", omp_get_thread_num());
-#endif
+//#endif
 
 				//compute_transform_rt_yz(p1, n1, row2, row3, tsg);
 				compute_transform_rt(p1, n1, Rsg, tsg);
