@@ -1,4 +1,3 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -7,10 +6,10 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2014, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -37,8 +36,6 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//M*/
-
 // Author : Tolga Birdal. Please see the notice in tmesh.h
 
 #include <stdio.h> 
@@ -347,7 +344,7 @@ namespace cv
 			int i;
 
 			double R[9], t[3];
-			pose_to_rt(Pose, R, t);
+			poseToRT(Pose, R, t);
 
 #if defined T_OPENMP
 #pragma omp parallel for
@@ -361,7 +358,7 @@ namespace cv
 				double n[3] = {(double)nr.nx, (double)nr.ny, (double)nr.nz}, n2[3];
 
 				// transform vertices
-				matrix_product441(Pose, pth, vt);
+				matrixProduct441(Pose, pth, vt);
 
 				if (fabs(vt[3])>EPS)
 				{
@@ -375,7 +372,7 @@ namespace cv
 				Mesh->vertices[i].vz = vt[2];
 
 				// rotate and normalize normals		
-				matrix_product331(R, n, n2);
+				matrixProduct331(R, n, n2);
 				double nNorm = sqrt(n2[0]*n2[0]+n2[1]*n2[1]+n2[2]*n2[2]);
 
 				if (nNorm>EPS)
@@ -469,7 +466,7 @@ namespace cv
 					}
 
 					if (flipViewpoint)
-						flip_normal_viewpoint_32f(vPtr, 0, 0, 0, &n.nx, &n.ny, &n.nz);
+						flipNormalViewpoint_32f(vPtr, 0, 0, 0, &n.nx, &n.ny, &n.nz);
 
 					vPtr[0] = v.vx;
 					vPtr[1] = v.vy;

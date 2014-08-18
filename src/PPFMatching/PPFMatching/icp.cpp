@@ -1,4 +1,3 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -10,9 +9,7 @@
 //                          License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2014, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -39,8 +36,6 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//M*/
-
 // Author: Tolga Birdal
 
 #include "precomp.hpp"
@@ -61,14 +56,14 @@ namespace cv
 {
 	namespace ppf_match_3d
 	{
-		static void subtract_columns(Mat SrcPC, double mean[3])
+		static void subtractColumns(Mat srcPC, double mean[3])
 		{
-			int height = SrcPC.rows;
-			int width = SrcPC.cols;
+			int height = srcPC.rows;
+			int width = srcPC.cols;
 
 			for (int i=0; i<height; i++)
 			{
-				float *row = (float*)(&SrcPC.data[i*SrcPC.step]);
+				float *row = (float*)(&srcPC.data[i*srcPC.step]);
 				{
 					row[0]-=(float)mean[0];
 					row[1]-=(float)mean[1];
@@ -78,16 +73,16 @@ namespace cv
 		}
 
 		// as in PCA
-		static void compute_mean_cols(Mat SrcPC, double mean[3])
+		static void computeMeanCols(Mat srcPC, double mean[3])
 		{
-			int height = SrcPC.rows;
-			int width = SrcPC.cols;
+			int height = srcPC.rows;
+			int width = srcPC.cols;
 
 			double mean1=0, mean2 = 0, mean3 = 0;
 
 			for (int i=0; i<height; i++)
 			{
-				const float *row = (float*)(&SrcPC.data[i*SrcPC.step]);
+				const float *row = (float*)(&srcPC.data[i*srcPC.step]);
 				{
 					mean1 += (double)row[0];
 					mean2 += (double)row[1];
@@ -105,22 +100,22 @@ namespace cv
 		}
 
 		// as in PCA
-		static void subtract_mean_from_columns(Mat SrcPC, double mean[3])
+		static void subtractMeanFromColumns(Mat srcPC, double mean[3])
 		{
-			compute_mean_cols(SrcPC, mean);
-			subtract_columns(SrcPC, mean);
+			computeMeanCols(srcPC, mean);
+			subtractColumns(srcPC, mean);
 		}
 
 		// compute the average distance to the origin
-		static double compute_dist_to_origin(Mat SrcPC)
+		static double computeDistToOrigin(Mat srcPC)
 		{
-			int height = SrcPC.rows;
-			int width = SrcPC.cols;
+			int height = srcPC.rows;
+			int width = srcPC.cols;
 			double dist = 0;
 
 			for (int i=0; i<height; i++)
 			{
-				const float *row = (float*)(&SrcPC.data[i*SrcPC.step]);
+				const float *row = (float*)(&srcPC.data[i*srcPC.step]);
 				dist += sqrt(row[0]*row[0]+row[1]*row[1]+row[2]*row[2]);
 			}
 
@@ -128,7 +123,7 @@ namespace cv
 		}
 
 		// From numerical receipes: Finds the median of an array
-		static float median_F(float arr[], int n) 
+		static float medianF(float arr[], int n) 
 		{
 			int low, high ;
 			int median;
@@ -178,37 +173,37 @@ namespace cv
 			}
 		}
 
-		static float madsigma(float* r, int m)
+		static float madSigma(float* r, int m)
 		{
 			float* t=(float*)calloc(m, sizeof(float));
 			int i=0;
 			float s=0, medR;
 
 			memcpy(t, r, m*sizeof(float));
-			medR=median_F(t, m);
+			medR=medianF(t, m);
 
 			for (i=0; i<m; i++)
 				t[i] = fabs(r[i]-medR);
 
-			s= median_F(t, m)/ 0.6745;
+			s= medianF(t, m)/ 0.6745;
 
 			free(t);
 			return s;
 		}
 
-		static float get_rejection_threshold(float* r, int m, float outlierScale)
+		static float getRejectionThreshold(float* r, int m, float outlierScale)
 		{
 			float* t=(float*)calloc(m, sizeof(float));
 			int i=0;
 			float s=0, medR, threshold;
 
 			memcpy(t, r, m*sizeof(float));
-			medR=median_F(t, m);
+			medR=medianF(t, m);
 
 			for (i=0; i<m; i++)
 				t[i] = (float)fabs((double)r[i]-(double)medR);
 
-			s = 1.48257968 * median_F(t, m);
+			s = 1.48257968 * medianF(t, m);
 
 			threshold = (outlierScale*s+medR);
 
@@ -217,7 +212,7 @@ namespace cv
 		}
 
 		// Kok Lim Low's linearization 
-		static void minimize_point_to_plane_metric(Mat Src, Mat Dst, Mat& X)
+		static void minimizePointToPlaneMetric(Mat Src, Mat Dst, Mat& X)
 		{
 			//Mat sub = Dst - Src;
 			Mat A=Mat(Src.rows, 6, CV_64F);
@@ -248,7 +243,7 @@ namespace cv
 		}
 
 
-		static void get_transform_mat(Mat X, double Pose[16])
+		static void getTransformMat(Mat X, double Pose[16])
 		{
 			Mat DCM;
 			double *r1, *r2, *r3;
@@ -299,37 +294,37 @@ namespace cv
 		duplicates is pre-allocated
 		make sure that the max element in array will not exceed maxElement
 		*/
-		static hashtable_int* get_hashtable(int* data, int length, int numMaxElement)
+		static hashtable_int* getHashtable(int* data, int length, int numMaxElement)
 		{
-			hashtable_int* hashtable = hashtable_int_create(static_cast<size_t>(numMaxElement*2), 0);
+			hashtable_int* hashtable = hashtableCreate(static_cast<size_t>(numMaxElement*2), 0);
 			for(int i = 0; i < length; i++)
 			{
 				const KeyType key = (KeyType)data[i];
-				hashtable_int_insert_hashed(hashtable, key+1, reinterpret_cast<void*>(i+1));
+				hashtableInsertHashed(hashtable, key+1, reinterpret_cast<void*>(i+1));
 			}
 
 			return hashtable;
 		}
 
 		// source point clouds are assumed to contain their normals
-		int ICP::registerModelToScene(const Mat& SrcPC, const Mat& DstPC, double& Residual, double Pose[16])
+		int ICP::registerModelToScene(const Mat& srcPC, const Mat& dstPC, double& Residual, double Pose[16])
 		{
-			int n = SrcPC.rows;
+			int n = srcPC.rows;
 			//double PoseInit[16];
 
-			bool UseRobustReject = RejectionScale>0;
+			bool UseRobustReject = m_rejectionScale>0;
 
-			Mat SrcTemp = SrcPC.clone();
-			Mat DstTemp = DstPC.clone();
+			Mat SrcTemp = srcPC.clone();
+			Mat DstTemp = dstPC.clone();
 			double meanSrc[3], meanDst[3];
-			compute_mean_cols(SrcTemp, meanSrc);
-			compute_mean_cols(DstTemp, meanDst);
+			computeMeanCols(SrcTemp, meanSrc);
+			computeMeanCols(DstTemp, meanDst);
 			double meanAvg[3]={0.5*(meanSrc[0]+meanDst[0]), 0.5*(meanSrc[1]+meanDst[1]), 0.5*(meanSrc[2]+meanDst[2])};
-			subtract_columns(SrcTemp, meanAvg);
-			subtract_columns(DstTemp, meanAvg);
+			subtractColumns(SrcTemp, meanAvg);
+			subtractColumns(DstTemp, meanAvg);
 
-			double distSrc = compute_dist_to_origin(SrcTemp);
-			double distDst = compute_dist_to_origin(DstTemp);
+			double distSrc = computeDistToOrigin(SrcTemp);
+			double distDst = computeDistToOrigin(DstTemp);
 
 			double scale = (double)n / ((distSrc + distDst)*0.5);
 
@@ -338,30 +333,30 @@ namespace cv
 			SrcTemp(cv::Range(0, SrcTemp.rows), cv::Range(0,3)) *= scale;
 			DstTemp(cv::Range(0, DstTemp.rows), cv::Range(0,3)) *= scale;
 
-			Mat SrcPC0 = SrcTemp;
-			Mat DstPC0 = DstTemp;
+			Mat srcPC0 = SrcTemp;
+			Mat dstPC0 = DstTemp;
 
 			// initialize pose
-			matrix_ident(4, Pose);
+			matrixIdentity(4, Pose);
 
-			void* flann = index_pc_flann(DstPC0);
+			void* flann = indexPCFlann(dstPC0);
 			Mat M = Mat::eye(4,4,CV_64F);
 			
 			double tempResidual = 0;
 
 
 			// walk the pyramid
-			for (int level = NumLevels-1; level >=0; level--)
+			for (int level = m_numLevels-1; level >=0; level--)
 			{
 				const double impact = 2;
 				double div = pow((double)2, (double)level);
 				double div2 = div*div;
 				const int numSamples = cvRound((double)(n/(div)));
-				const double TolP = Tolerence*(double)(level+1)*(level+1);
-				const int MaxIterationsPyr = cvRound((double)MaxIterations/(level+1));
+				const double TolP = m_tolerence*(double)(level+1)*(level+1);
+				const int MaxIterationsPyr = cvRound((double)m_maxItereations/(level+1));
 
 				// Obtain the sampled point clouds for this level: Also rotates the normals
-				Mat SrcPC = transform_pc_pose(SrcPC0, Pose);
+				Mat srcPC = transformPCPose(srcPC0, Pose);
 
 				const int sampleStep = cvRound((double)n/(double)numSamples);
 				std::vector<int> srcSampleInd;
@@ -375,12 +370,12 @@ namespace cv
 
 				Also note that you have to compute a KD-tree for each level.
 				*/
-				SrcPC = sample_pc_uniform_ind(SrcPC, sampleStep, srcSampleInd);
+				srcPC = samplePCUniformInd(srcPC, sampleStep, srcSampleInd);
 
 				double fval_old=9999999999;
 				double fval_perc=0;
 				double fval_min=9999999999;
-				Mat Src_Moved = SrcPC.clone();
+				Mat Src_Moved = srcPC.clone();
 
 				int i=0;
 
@@ -400,13 +395,13 @@ namespace cv
 				int* newJ = new int[numElSrc];
 
 				double PoseX[16]={0};
-				matrix_ident(4, PoseX);
+				matrixIdentity(4, PoseX);
 
 				while( (!(fval_perc<(1+TolP) && fval_perc>(1-TolP))) && i<MaxIterationsPyr)
 				{
 					int selInd = 0, di=0;
 
-					query_pc_flann(flann, Src_Moved, Indices, Distances);
+					queryPCFlann(flann, Src_Moved, Indices, Distances);
 
 					for (di=0; di<numElSrc; di++)
 					{
@@ -417,7 +412,7 @@ namespace cv
 					if (UseRobustReject)
 					{
 						int numInliers = 0;
-						float threshold = get_rejection_threshold(distances, Distances.rows, RejectionScale);
+						float threshold = getRejectionThreshold(distances, Distances.rows, m_rejectionScale);
 						Mat acceptInd = Distances<threshold;
 
 						uchar *accPtr = (uchar*)acceptInd.data;
@@ -438,7 +433,7 @@ namespace cv
 					// is assigned to the same model point m_j, then select p_i that corresponds
 					// to the minimum distance
 
-					hashtable_int* duplicateTable = get_hashtable(newJ, numElSrc, DstPC0.rows);
+					hashtable_int* duplicateTable = getHashtable(newJ, numElSrc, dstPC0.rows);
 
 					for(di=0; di<duplicateTable->size; di++) {
 						hashnode_i *node = duplicateTable->nodes[di];
@@ -468,25 +463,25 @@ namespace cv
 						}
 					}
 
-					hashtable_int_destroy(duplicateTable);
+					hashtableDestroy(duplicateTable);
 
 					if (selInd)
 					{
 
-						Mat Src_Match = Mat(selInd, SrcPC.cols, CV_64F);
-						Mat Dst_Match = Mat(selInd, SrcPC.cols, CV_64F);
+						Mat Src_Match = Mat(selInd, srcPC.cols, CV_64F);
+						Mat Dst_Match = Mat(selInd, srcPC.cols, CV_64F);
 
 						for(di=0; di<selInd; di++) 
 						{
 							const int indModel = indicesModel[di];
 							const int indScene = indicesScene[di];
-							const float *srcPt = (float*)&SrcPC.data[indModel*SrcPC.step];
-							const float *dstPt = (float*)&DstPC0.data[indScene*DstPC0.step];
+							const float *srcPt = (float*)&srcPC.data[indModel*srcPC.step];
+							const float *dstPt = (float*)&dstPC0.data[indScene*dstPC0.step];
 							double *srcMatchPt = (double*)&Src_Match.data[di*Src_Match.step];
 							double *dstMatchPt = (double*)&Dst_Match.data[di*Dst_Match.step];
 							int ci=0;
 
-							for (ci=0; ci<SrcPC.cols; ci++)
+							for (ci=0; ci<srcPC.cols; ci++)
 							{
 								srcMatchPt[ci] = (double)srcPt[ci];
 								dstMatchPt[ci] = (double)dstPt[ci];
@@ -494,10 +489,10 @@ namespace cv
 						}			
 
 						Mat X;
-						minimize_point_to_plane_metric(Src_Match, Dst_Match, X);
+						minimizePointToPlaneMetric(Src_Match, Dst_Match, X);
 
-						get_transform_mat(X, PoseX);
-						Src_Moved = transform_pc_pose(SrcPC, PoseX);
+						getTransformMat(X, PoseX);
+						Src_Moved = transformPCPose(srcPC, PoseX);
 
 						double fval = cv::norm(Src_Match, Dst_Match)/(double)(Src_Moved.rows);
 
@@ -518,7 +513,7 @@ namespace cv
 				}
 
 				double TempPose[16];
-				matrix_product44(PoseX, Pose, TempPose);
+				matrixProduct44(PoseX, Pose, TempPose);
 
 				// no need to copy the last 4 rows	
 				for (int c=0; c<12; c++)
@@ -543,29 +538,29 @@ namespace cv
 
 			//Pose(1:3, 4) = Pose(1:3, 4)./scale + meanAvg' - Pose(1:3, 1:3)*meanAvg';
 			double Rpose[9], Cpose[3];
-			pose_to_r(Pose, Rpose);
-			matrix_product331(Rpose, meanAvg, Cpose);
+			poseToR(Pose, Rpose);
+			matrixProduct331(Rpose, meanAvg, Cpose);
 			Pose[3] -= Cpose[0];
 			Pose[7] -= Cpose[1];
 			Pose[11] -= Cpose[2];
 
 			Residual = tempResidual;
 
-			destroy_flann(flann); flann = 0;
+			destroyFlann(flann); flann = 0;
 			return 0;
 		}
 
 		// source point clouds are assumed to contain their normals
-		int ICP::registerModelToScene(const Mat& SrcPC, const Mat& DstPC, std::vector<Pose3D*>& Poses)
+		int ICP::registerModelToScene(const Mat& srcPC, const Mat& dstPC, std::vector<Pose3D*>& Poses)
 		{
 			for (int i=0; i<Poses.size(); i++)
 			{
 				double PoseICP[16]={0};
-				Mat SrcTemp = SrcPC.clone();
-				transform_pc_pose(SrcTemp, Poses[i]->Pose);
-				registerModelToScene(SrcTemp, DstPC, Poses[i]->residual, PoseICP);
-				Poses[i]->append_pose(PoseICP);
-				//Poses[i]->update_pose(Pose);
+				Mat SrcTemp = srcPC.clone();
+				transformPCPose(SrcTemp, Poses[i]->Pose);
+				registerModelToScene(SrcTemp, dstPC, Poses[i]->residual, PoseICP);
+				Poses[i]->appendPose(PoseICP);
+				//Poses[i]->updatePose(Pose);
 			}
 
 			return 0;

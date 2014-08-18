@@ -1,3 +1,42 @@
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                          License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2014, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+// Author: Tolga Birdal
 
 #include "precomp.hpp"
 #include "ppf_helpers.hpp"
@@ -28,7 +67,7 @@ namespace cv
 	namespace ppf_match_3d 
 	{
 
-		Mat load_ply_simple(const char* fileName, int numVertices, int withNormals)
+		Mat loadPLYSimple(const char* fileName, int numVertices, int withNormals)
 		{
 			Mat cloud;
 
@@ -83,7 +122,7 @@ namespace cv
 		}
 
 
-		void write_ply(Mat PC, const char* FileName)
+		void writePLY(Mat PC, const char* FileName)
 		{
 			ofstream outFile( FileName );
 
@@ -136,7 +175,7 @@ namespace cv
 			return;
 		}
 
-		Mat sample_pc_uniform(Mat PC, int sampleStep)
+		Mat samplePCUniform(Mat PC, int sampleStep)
 		{
 			int numRows = PC.rows/sampleStep;
 			Mat sampledPC = Mat(numRows, PC.cols, PC.type());
@@ -150,7 +189,7 @@ namespace cv
 			return sampledPC;
 		}
 
-		Mat sample_pc_uniform_ind(Mat PC, int sampleStep, vector<int> &indices)
+		Mat samplePCUniformInd(Mat PC, int sampleStep, vector<int> &indices)
 		{
 			int numRows = cvRound((double)PC.rows/(double)sampleStep);
 			indices.resize(numRows);
@@ -166,7 +205,7 @@ namespace cv
 			return sampledPC;
 		}
 
-		void* index_pc_flann(Mat pc)
+		void* indexPCFlann(Mat pc)
 		{	
 			FLANNParameters p;
 			FLANN_INDEX flannIndex;
@@ -221,7 +260,7 @@ namespace cv
 			return (void*)flannIndex;
 		}
 
-		void destroy_flann(void* flannIndex)
+		void destroyFlann(void* flannIndex)
 		{
 			FLANNParameters p;
 			p.log_level = FLANN_LOG_NONE;
@@ -238,7 +277,7 @@ namespace cv
 		}
 
 		// For speed purposes this function assumes that PC, Indices and Distances are created with continuous structures
-		void query_pc_flann(void* flannIndex, Mat PC, Mat& Indices, Mat& Distances)
+		void queryPCFlann(void* flannIndex, Mat PC, Mat& Indices, Mat& Distances)
 		{	
 			FLANNParameters p;
 			float speedup=0;
@@ -289,7 +328,7 @@ namespace cv
 		// uses a volume instead of an octree
 		// TODO: Right now normals are required. 
 		// This is much faster than sample_pc_octree
-		Mat sample_pc_by_quantization(Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep, int weightByCenter)
+		Mat samplePCByQuantization(Mat pc, float xrange[2], float yrange[2], float zrange[2], float sampleStep, int weightByCenter)
 		{
 			vector < vector<int> > map;
 
@@ -444,7 +483,7 @@ namespace cv
 		}
 
 		// compute the standard bounding box
-		void compute_bbox_std(Mat pc, float xRange[2], float yRange[2], float zRange[2])
+		void computeBboxStd(Mat pc, float xRange[2], float yRange[2], float zRange[2])
 		{
 			Mat pcPts = pc.colRange(0, 3);
 			int num = pcPts.rows;
@@ -482,7 +521,7 @@ namespace cv
 			}
 		}
 
-		Mat normalize_pc_coeff(Mat pc, float scale, float* Cx, float* Cy, float* Cz, float* MinVal, float* MaxVal)
+		Mat normalizePCCoeff(Mat pc, float scale, float* Cx, float* Cy, float* Cz, float* MinVal, float* MaxVal)
 		{
 			double minVal=0, maxVal=0;
 
@@ -517,7 +556,7 @@ namespace cv
 			return pcn;
 		}
 
-		Mat trans_pc_coeff(Mat pc, float scale, float Cx, float Cy, float Cz, float MinVal, float MaxVal)
+		Mat transPCCoeff(Mat pc, float scale, float Cx, float Cy, float Cz, float MinVal, float MaxVal)
 		{
 			Mat x,y,z, pcn;
 			pc.col(0).copyTo(x);
@@ -537,12 +576,12 @@ namespace cv
 			return pcn;
 		}
 
-		Mat transform_pc_pose(Mat pc, double Pose[16])
+		Mat transformPCPose(Mat pc, double Pose[16])
 		{
 			Mat pct = Mat(pc.rows, pc.cols, CV_32F);
 
 			double R[9], t[3];
-			pose_to_rt(Pose, R, t); 
+			poseToRT(Pose, R, t); 
 
 #if defined T_OPENMP
 #pragma omp parallel for
@@ -557,7 +596,7 @@ namespace cv
 				double p[4] = {(double)pcData[0], (double)pcData[1], (double)pcData[2], 1};
 				double p2[4];
 
-				matrix_product441(Pose, p, p2);
+				matrixProduct441(Pose, p, p2);
 
 				// p2[3] should normally be 1
 				if (fabs(p2[3])>EPS)
@@ -569,9 +608,9 @@ namespace cv
 
 				// Rotate the normals, too
 				double n[3] = {(double)n1[0], (double)n1[1], (double)n1[2]}, n2[3];
-				//matrix_product441(Pose, n, n2);
+				//matrixProduct441(Pose, n, n2);
 
-				matrix_product331(R, n, n2);
+				matrixProduct331(R, n, n2);
 				double nNorm = sqrt(n2[0]*n2[0]+n2[1]*n2[1]+n2[2]*n2[2]);
 
 				if (nNorm>EPS)
@@ -585,7 +624,7 @@ namespace cv
 			return pct;
 		}
 
-		Mat gen_random_mat(int rows, int cols, double mean, double stddev, int type)
+		Mat genRandomMat(int rows, int cols, double mean, double stddev, int type)
 		{
 			cv::Mat meanMat = mean*cv::Mat::ones(1,1,type);
 			cv::Mat sigmaMat= stddev*cv::Mat::ones(1,1,type);
@@ -596,7 +635,7 @@ namespace cv
 			return matr;
 		}
 
-		void get_rand_quat(double q[4])
+		void getRandQuat(double q[4])
 		{
 			q[0] = (float)rand()/(float)(RAND_MAX);
 			q[1] = (float)rand()/(float)(RAND_MAX);
@@ -612,30 +651,30 @@ namespace cv
 			q[0]=fabs(q[0]);
 		}
 
-		void get_random_rotation(double R[9])
+		void getRandomRotation(double R[9])
 		{
 			double q[4];
-			get_rand_quat(q);
-			quaternion_to_matrix(q, R);
+			getRandQuat(q);
+			quatToDCM(q, R);
 		}
 
-		void get_random_pose(double Pose[16])
+		void getRandomPose(double Pose[16])
 		{
 			double R[9], t[3];
 
 			srand((unsigned int)time(0));
-			get_random_rotation(R);
+			getRandomRotation(R);
 
 			t[0] = (float)rand()/(float)(RAND_MAX);
 			t[1] = (float)rand()/(float)(RAND_MAX);
 			t[2] = (float)rand()/(float)(RAND_MAX);
 
-			rt_to_pose(R,t,Pose);
+			rtToPose(R,t,Pose);
 		}
 
-		Mat add_noise_pc(Mat pc, double scale)
+		Mat addNoisePC(Mat pc, double scale)
 		{
-			Mat randT = gen_random_mat(pc.rows,pc.cols,0,scale,CV_32FC1);
+			Mat randT = genRandomMat(pc.rows,pc.cols,0,scale,CV_32FC1);
 			return randT + pc;
 		}
 
@@ -648,7 +687,7 @@ namespace cv
 		Also, view point flipping as in point cloud library is implemented
 		*/
 
-		void mean_cov_local_pc(const float* pc, const int ws, const int point_count, double CovMat[3][3], double Mean[4])
+		void meanCovLocalPC(const float* pc, const int ws, const int point_count, double CovMat[3][3], double Mean[4])
 		{
 			int i;
 			double accu[16];	
@@ -687,7 +726,7 @@ namespace cv
 
 		}
 
-		void mean_cov_local_pc_ind(const float* pc, const int* Indices, const int ws, const int point_count, double CovMat[3][3], double Mean[4])
+		void meanCovLocalPCInd(const float* pc, const int* Indices, const int ws, const int point_count, double CovMat[3][3], double Mean[4])
 		{
 			int i;
 			double accu[16]={0};	
@@ -726,7 +765,7 @@ namespace cv
 		}
 
 
-		CV_EXPORTS int compute_normals_pc_3d(const Mat PC, Mat& PCNormals, const int NumNeighbors, const bool FlipViewpoint, const double viewpoint[3])
+		CV_EXPORTS int computeNormalsPC3d(const Mat PC, Mat& PCNormals, const int NumNeighbors, const bool FlipViewpoint, const double viewpoint[3])
 		{
 			int i;
 
@@ -755,13 +794,13 @@ namespace cv
 
 			Mat PCInput(2, sizes, CV_32F, dataset, 0);
 
-			void* flannIndex = index_pc_flann(PCInput);
+			void* flannIndex = indexPCFlann(PCInput);
 
 			Mat Indices(2, sizesResult, CV_32S, indices, 0);
 			Mat Distances(2, sizesResult, CV_32F, distances, 0);
 
-			query_pc_flann(flannIndex, PCInput, Indices, Distances);
-			destroy_flann(flannIndex); flannIndex = 0;
+			queryPCFlann(flannIndex, PCInput, Indices, Distances);
+			destroyFlann(flannIndex); flannIndex = 0;
 
 			PCNormals = Mat(PC.rows, 6, CV_32F);
 
@@ -778,10 +817,10 @@ namespace cv
 				int* indLocal = &indices[i*NumNeighbors];
 
 				// compute covariance matrix
-				mean_cov_local_pc_ind(dataset, indLocal, 3, NumNeighbors, C, mu);
+				meanCovLocalPCInd(dataset, indLocal, 3, NumNeighbors, C, mu);
 
 				// eigenvectors of covariance matrix
-				t_eigen_33_lowest(C, nr);
+				eigenLowest33(C, nr);
 
 				// find min eigenvalue
 				if (w[0]<w[1])
@@ -808,7 +847,7 @@ namespace cv
 
 				if (FlipViewpoint)
 				{
-					flip_normal_viewpoint(pci, viewpoint[0], viewpoint[1], viewpoint[2], &nr[0], &nr[1], &nr[2]);
+					flipNormalViewpoint(pci, viewpoint[0], viewpoint[1], viewpoint[2], &nr[0], &nr[1], &nr[2]);
 				}
 
 				pcr[3] = (float)nr[0];

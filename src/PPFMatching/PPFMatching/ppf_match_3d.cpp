@@ -1,3 +1,42 @@
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                          License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2014, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+// Author: Tolga Birdal
 
 #include "precomp.hpp"
 #include "ppf_match_3d.hpp"
@@ -13,7 +52,7 @@ namespace cv
 	namespace ppf_match_3d 
 	{
 		// simple hashing
-		static int hash_ppf_simple(const double f[4], const double AngleStep, const double DistanceStep)
+		static int hashPPFSimple(const double f[4], const double AngleStep, const double DistanceStep)
 		{
 			const unsigned char d1 = (unsigned char) (floor ((double)f[0] / (double)AngleStep));
 			const unsigned char d2 = (unsigned char) (floor ((double)f[1] / (double)AngleStep));
@@ -25,7 +64,7 @@ namespace cv
 		}
 
 		// quantize ppf and hash it for proper indexing
-		static int hash_ppf(const double f[4], const double AngleStep, const double DistanceStep)
+		static int hashPPF(const double f[4], const double AngleStep, const double DistanceStep)
 		{
 			const int d1 = (int) (floor ((double)f[0] / (double)AngleStep));
 			const int d2 = (int) (floor ((double)f[1] / (double)AngleStep));
@@ -34,24 +73,24 @@ namespace cv
 			int key[4]={d1,d2,d3,d4};
 			int hashKey=0;
 
-			MurmurHash3_x86_32(key, 4*sizeof(int), 42, &hashKey);
+			hashMurmurx86(key, 4*sizeof(int), 42, &hashKey);
 
 			return hashKey;
 		}
 
-		static size_t hash_murmur(unsigned int key)
+		static size_t hashMurmur(unsigned int key)
 		{
 			size_t hashKey=0;
-			MurmurHash3_x86_32((void*)&key, 4, 42, &hashKey);
+			hashMurmurx86((void*)&key, 4, 42, &hashKey);
 			return hashKey;
 		}
 
 		// TODO: An initial attempt. I will double check this
-		static double compute_alpha(const double p1[4], const double n1[4], const double p2[4])
+		static double computeAlpha(const double p1[4], const double n1[4], const double p2[4])
 		{
 			double Tmg[3], mpt[3], row2[3], row3[3], alpha;
 
-			compute_transform_rt_yz(p1, n1, row2, row3, Tmg);
+			computeTransformRTyz(p1, n1, row2, row3, Tmg);
 
 			// checked row2, row3: They are correct
 
@@ -74,7 +113,7 @@ namespace cv
 
 
 		// compute per point PPF as in paper
-		void PPF3DDetector::compute_ppf_features(	const double p1[4], const double n1[4],
+		void PPF3DDetector::computePPFFeatures(	const double p1[4], const double n1[4],
 									const double p2[4], const double n2[4],
 									double f[4])
 		{
@@ -119,7 +158,7 @@ namespace cv
 			f[2] = TAngle3(n1, n2);
 		}
 
-		void PPF3DDetector::clear_training_models()
+		void PPF3DDetector::clearTrainingModels()
 		{
 			if (this->hash_nodes)
 			{
@@ -129,14 +168,14 @@ namespace cv
 
 			if (this->hash_table)
 			{
-				hashtable_int_destroy(this->hash_table);
+				hashtableDestroy(this->hash_table);
 				this->hash_table=0;
 			}
 		}
 
 		PPF3DDetector::~PPF3DDetector()
 		{
-			clear_training_models();
+			clearTrainingModels();
 		}
 
 		// TODO: Check all step sizes to be positive
@@ -148,7 +187,7 @@ namespace cv
 
 			// compute bbox
 			float xRange[2], yRange[2], zRange[2];
-			compute_bbox_std(PC, xRange, yRange, zRange);
+			computeBboxStd(PC, xRange, yRange, zRange);
 
 			// compute sampling step from diameter of bbox
 			float dx = xRange[1] - xRange[0];
@@ -158,12 +197,12 @@ namespace cv
 
 			float distanceStep = diameter * samplingStepRelative;
 
-			Mat sampled = sample_pc_by_quantization(PC, xRange, yRange, zRange, samplingStepRelative,1);
+			Mat sampled = samplePCByQuantization(PC, xRange, yRange, zRange, samplingStepRelative,1);
 
 			//int size = next_power_of_two(sampled.rows*sampled.rows);
 			int size = sampled.rows*sampled.rows;
 
-			hashtable_int* hashTable = hashtable_int_create(size, NULL);
+			hashtable_int* hashTable = hashtableCreate(size, NULL);
 
 			int numPPF = sampled.rows*sampled.rows;
 			PPF = Mat(numPPF, T_PPF_LENGTH, CV_32FC1);
@@ -195,9 +234,9 @@ namespace cv
 						const double n2[4] = {f2[3], f2[4], f2[5], 0};
 
 						double f[4]={0};
-						compute_ppf_features(p1, n1, p2, n2, f);
-						unsigned int hashValue = hash_ppf(f, angleStepRadians, distanceStep);
-						double alpha = compute_alpha(p1, n1, p2);
+						computePPFFeatures(p1, n1, p2, n2, f);
+						unsigned int hashValue = hashPPF(f, angleStepRadians, distanceStep);
+						double alpha = computeAlpha(p1, n1, p2);
 						unsigned int corrInd = i*numRefPoints+j;
 						unsigned int ppfInd = corrInd*ppfStep;
 
@@ -206,7 +245,7 @@ namespace cv
 						hashNode->i = i;
 						hashNode->ppfInd = ppfInd;
 						
-						hashtable_int_insert_hashed(hashTable, hashValue, (void*)hashNode);
+						hashtableInsertHashed(hashTable, hashValue, (void*)hashNode);
 
 						float* ppfRow = (float*)(&(PPF.data[ ppfInd ]));
 						ppfRow[0] = f[0];
@@ -236,7 +275,7 @@ namespace cv
 		///////////////////////// MATCHING ////////////////////////////////////////
 
 
-		bool PPF3DDetector::match_pose(const Pose3D& sourcePose, const Pose3D& targetPose)
+		bool PPF3DDetector::matchPose(const Pose3D& sourcePose, const Pose3D& targetPose)
 		{
 			// translational difference
 			const double* Pose = sourcePose.Pose;
@@ -249,7 +288,7 @@ namespace cv
 			return (phi<this->RotationThreshold && dNorm < this->PositionThreshold);
 		}
 
-		int PPF3DDetector::cluster_poses(Pose3D** poseList, int NumPoses, vector < Pose3D* >& finalPoses)
+		int PPF3DDetector::clusterPoses(Pose3D** poseList, int NumPoses, vector < Pose3D* >& finalPoses)
 		{
 			vector<PoseCluster3D*> poseClusters;
 			poseClusters.clear();
@@ -268,9 +307,9 @@ namespace cv
 				for (int j=0; j<poseClusters.size() && !assigned; j++)
 				{
 					const Pose3D* poseCenter = poseClusters[j]->poseList[0];
-					if (match_pose(*pose, *poseCenter))
+					if (matchPose(*pose, *poseCenter))
 					{
-						poseClusters[j]->add_pose(pose);
+						poseClusters[j]->addPose(pose);
 						assigned = true;
 					}
 				}
@@ -334,7 +373,7 @@ namespace cv
 					qAvg[2]/=wSum;
 					qAvg[3]/=wSum;
 
-					curPoses[0]->update_pose_quat(qAvg, tAvg);
+					curPoses[0]->updatePoseQuat(qAvg, tAvg);
 					curPoses[0]->numVotes=curCluster->numVotes;
 
 					//finalPoses.push_back(curPoses[0]);
@@ -380,7 +419,7 @@ namespace cv
 					qAvg[2]/=(double)curSize;
 					qAvg[3]/=(double)curSize;
 
-					curPoses[0]->update_pose_quat(qAvg, tAvg);
+					curPoses[0]->updatePoseQuat(qAvg, tAvg);
 					curPoses[0]->numVotes=curCluster->numVotes;
 
 					//finalPoses.push_back(curPoses[0]);
@@ -423,7 +462,7 @@ namespace cv
 
 			// compute bbox
 			float xRange[2], yRange[2], zRange[2];
-			compute_bbox_std(pc, xRange, yRange, zRange);
+			computeBboxStd(pc, xRange, yRange, zRange);
 			
 			// sample the point cloud
 			//float sampling_step_relative = (float)ppfModel->sampling_step_relative;
@@ -432,7 +471,7 @@ namespace cv
 			float dz = zRange[1] - zRange[0];
 			float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
 			float distanceSampleStep = diameter * RelativeSceneDistance;
-			Mat sampled = sample_pc_by_quantization(pc, xRange, yRange, zRange, RelativeSceneDistance,1);
+			Mat sampled = samplePCByQuantization(pc, xRange, yRange, zRange, RelativeSceneDistance,1);
 			
 			// allocate the accumulator
 #if !defined (T_OPENMP)
@@ -463,8 +502,8 @@ namespace cv
 				//printf("In thread: %d\n", omp_get_thread_num());
 //#endif
 
-				//compute_transform_rt_yz(p1, n1, row2, row3, tsg);
-				compute_transform_rt(p1, n1, Rsg, tsg);
+				//computeTransformRTyz(p1, n1, row2, row3, tsg);
+				computeTransformRT(p1, n1, Rsg, tsg);
 				row1=&Rsg[0]; row2=&Rsg[3]; row3=&Rsg[6];
 
 				// Tolga Birdal's notice: 
@@ -482,12 +521,12 @@ namespace cv
 						double p2t[4], alpha_scene;
 
 						double f[4]={0};
-						compute_ppf_features(p1, n1, p2, n2, f);
-						//unsigned int hashValue = hash_ppf_simple(f, angleStepRadians, distanceStep);
-						unsigned int hashValue = hash_ppf(f, angleStepRadians, distanceStep);
+						computePPFFeatures(p1, n1, p2, n2, f);
+						//unsigned int hashValue = hashPPFSimple(f, angleStepRadians, distanceStep);
+						unsigned int hashValue = hashPPF(f, angleStepRadians, distanceStep);
 
 						// we don't need to call this here, as we already estimate the tsg from scene reference point
-						//double alpha = compute_alpha(p1, n1, p2);
+						//double alpha = computeAlpha(p1, n1, p2);
 						p2t[1] = tsg[1] + row2[0] * p2[0] + row2[1] * p2[1] + row2[2] * p2[2];
 						p2t[2] = tsg[2] + row3[0] * p2[0] + row3[1] * p2[1] + row3[2] * p2[2];
 
@@ -503,7 +542,7 @@ namespace cv
 
 						alpha_scene=-alpha_scene;
 
-						hashnode_i* node = hashtable_int_get_bucket_hashed(hash_table, (hashValue));
+						hashnode_i* node = hashtableGetBucketHashed(hash_table, (hashValue));
 
 						//int numNodes = 0;
 						while (node)
@@ -559,8 +598,8 @@ namespace cv
 				// invert Tsg : Luckily rotation is orthogonal: Inverse = Transpose.
 				// We are not required to invert.
 				double tInv[3], tmg[3], Rmg[9], Ralpha[9];
-				matrix_transpose33(Rsg, RInv);
-				matrix_product331(RInv, tsg, tInv);
+				matrixTranspose33(Rsg, RInv);
+				matrixProduct331(RInv, tsg, tInv);
 
 				double TsgInv[16] =	{	RInv[0], RInv[1], RInv[2], -tInv[0],
 					RInv[3], RInv[4], RInv[5], -tInv[1],
@@ -574,7 +613,7 @@ namespace cv
 				const double nMax[4] = {fMax[3], fMax[4], fMax[5], 1};
 				double pose[4][4];
 
-				compute_transform_rt(pMax, nMax, Rmg, tmg);
+				computeTransformRT(pMax, nMax, Rmg, tmg);
 				row1=&Rsg[0]; row2=&Rsg[3]; row3=&Rsg[6];
 
 				double Tmg[16] =	{	Rmg[0], Rmg[1], Rmg[2], tmg[0],
@@ -589,16 +628,16 @@ namespace cv
 
 				// Equation 2:
 				double Talpha[16]={0};
-				get_unit_x_rotation_44(alpha, Talpha);
+				getUnitXRotation_44(alpha, Talpha);
 
 				double Temp[16]={0};
 				double Pose[16]={0};
-				matrix_product44(Talpha, Tmg, Temp);
-				matrix_product44(TsgInv, Temp, Pose);
+				matrixProduct44(Talpha, Tmg, Temp);
+				matrixProduct44(TsgInv, Temp, Pose);
 
 				Pose3D *ppf = new Pose3D(alpha, refIndMax, maxVotes);
 
-				ppf->update_pose(Pose);
+				ppf->updatePose(Pose);
 
 				poseList[i/sceneSamplingStep] = ppf;
 
@@ -615,7 +654,7 @@ namespace cv
 			int numPosesAdded = sampled.rows/sceneSamplingStep;
 
 			// TODO : Try weighting by numVotes
-			cluster_poses(poseList, numPosesAdded, results);
+			clusterPoses(poseList, numPosesAdded, results);
 
 			// free up the used space
 			sampled.release();

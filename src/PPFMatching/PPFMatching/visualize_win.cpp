@@ -303,7 +303,7 @@ int display(void* UserData)
 	if (withBbox || withOctree)
 	{
 		//compute_obb(pcn, xRange, yRange, zRange);
-		compute_bbox_std(pcn, xRange, yRange, zRange);
+		computeBboxStd(pcn, xRange, yRange, zRange);
 	}
 
 	if (withBbox)
@@ -505,8 +505,8 @@ void* visualize_registration(Mat pc1, Mat pc2, char* Title, int waitMS)
 	TWindowData* wd = new TWindowData();
 	
 	float cx=0, cy=0, cz=0, minv=0, maxv=0;
-	wd->PC = normalize_pc_coeff(pc1, 5, &cx, &cy, &cz, &minv, &maxv);
-	wd->PC2 = trans_pc_coeff(pc2, 5, cx, cy, cz, minv, maxv);
+	wd->PC = normalizePCCoeff(pc1, 5, &cx, &cy, &cz, &minv, &maxv);
+	wd->PC2 = transPCCoeff(pc2, 5, cx, cy, cz, minv, maxv);
 	//wd->PC2 = normalize_pc(pc2, 5);
 
 	wd->window = window;

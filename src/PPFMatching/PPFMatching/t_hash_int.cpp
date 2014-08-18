@@ -1,8 +1,42 @@
-
-/*
-Author: Tolga Birdal
-
-*/
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                          License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2014, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+// Author: Tolga Birdal
 
 #include "precomp.hpp"
 #include <string.h>
@@ -44,7 +78,7 @@ namespace cv
 		//}
 
 
-		hashtable_int *hashtable_int_create(size_t size, size_t (*hashfunc)(unsigned int))
+		hashtable_int *hashtableCreate(size_t size, size_t (*hashfunc)(unsigned int))
 		{
 			hashtable_int *hashtbl;
 
@@ -71,7 +105,7 @@ namespace cv
 		}
 
 
-		void hashtable_int_destroy(hashtable_int *hashtbl)
+		void hashtableDestroy(hashtable_int *hashtbl)
 		{
 			size_t n;
 			struct hashnode_i *node, *oldnode;
@@ -89,7 +123,7 @@ namespace cv
 		}
 
 
-		unsigned int hashtable_int_insert(hashtable_int *hashtbl, KeyType key, void *data)
+		unsigned int hashtableInsert(hashtable_int *hashtbl, KeyType key, void *data)
 		{
 			struct hashnode_i *node;
 			size_t hash=hashtbl->hashfunc(key)%hashtbl->size;
@@ -118,7 +152,7 @@ namespace cv
 			return 0;
 		}
 
-		unsigned int hashtable_int_insert_hashed(hashtable_int *hashtbl, KeyType key, void *data)
+		unsigned int hashtableInsertHashed(hashtable_int *hashtbl, KeyType key, void *data)
 		{
 			struct hashnode_i *node;
 			size_t hash = key % hashtbl->size;
@@ -148,7 +182,7 @@ namespace cv
 		}
 
 
-		unsigned int hashtable_int_remove(hashtable_int *hashtbl, KeyType key)
+		unsigned int hashtableRemove(hashtable_int *hashtbl, KeyType key)
 		{
 			struct hashnode_i *node, *prevnode=NULL;
 			size_t hash=hashtbl->hashfunc(key)%hashtbl->size;
@@ -169,7 +203,7 @@ namespace cv
 		}
 
 
-		void *hashtable_int_get(hashtable_int *hashtbl, KeyType key)
+		void *hashtableGet(hashtable_int *hashtbl, KeyType key)
 		{
 			struct hashnode_i *node;
 			size_t hash=hashtbl->hashfunc(key)%hashtbl->size;
@@ -185,7 +219,7 @@ namespace cv
 			return NULL;
 		}
 
-		hashnode_i* hashtable_int_get_bucket_hashed(hashtable_int *hashtbl, KeyType key)
+		hashnode_i* hashtableGetBucketHashed(hashtable_int *hashtbl, KeyType key)
 		{
 			struct hashnode_i *node;
 			size_t hash = key % hashtbl->size;
@@ -193,7 +227,7 @@ namespace cv
 			return hashtbl->nodes[hash];
 		}
 
-		unsigned int hashtable_int_resize(hashtable_int *hashtbl, size_t size)
+		unsigned int hashtableResize(hashtable_int *hashtbl, size_t size)
 		{
 			hashtable_int newtbl;
 			size_t n;
@@ -207,8 +241,8 @@ namespace cv
 			for(n=0; n<hashtbl->size; ++n) {
 				for(node=hashtbl->nodes[n]; node; node=next) {
 					next = node->next;
-					hashtable_int_insert(&newtbl, node->key, node->data);
-					hashtable_int_remove(hashtbl, node->key);
+					hashtableInsert(&newtbl, node->key, node->data);
+					hashtableRemove(hashtbl, node->key);
 
 				}
 			}
@@ -221,7 +255,7 @@ namespace cv
 		}
 
 
-		int hashtable_int_write(const hashtable_int * hashtbl, const size_t dataSize, FILE* f)
+		int hashtableWrite(const hashtable_int * hashtbl, const size_t dataSize, FILE* f)
 		{
 			size_t hashMagic=T_HASH_MAGIC;
 			size_t n=hashtbl->size;
@@ -257,7 +291,7 @@ namespace cv
 		}
 
 
-		void hashtable_print(hashtable_int *hashtbl)
+		void hashtablePrint(hashtable_int *hashtbl)
 		{
 			size_t n;
 			struct hashnode_i *node,*next;
@@ -272,7 +306,7 @@ namespace cv
 			}
 		}
 
-		hashtable_int *hashtable_int_read(FILE* f)
+		hashtable_int *hashtableRead(FILE* f)
 		{
 			size_t hashMagic=0;
 			size_t n=0;
@@ -286,7 +320,7 @@ namespace cv
 				fread(&n, sizeof(size_t),1, f);
 				fread(&dataSize, sizeof(size_t),1, f);
 
-				hashtbl=hashtable_int_create(n, hash);
+				hashtbl=hashtableCreate(n, hash);
 
 				for(i=0; i<hashtbl->size; i++) 
 				{
@@ -310,7 +344,7 @@ namespace cv
 						else
 							fread(&data, dataSize, 1, f);
 
-						hashtable_int_insert(hashtbl, key, data);
+						hashtableInsert(hashtbl, key, data);
 						//free(key);
 					}
 				}
