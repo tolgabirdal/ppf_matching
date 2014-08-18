@@ -43,33 +43,49 @@
 
 #include <opencv2/core/core.hpp>
 
-namespace cv 
+namespace cv
 {
-	namespace ppf_match_3d 
-	{
+namespace ppf_match_3d
+{
 
-		cv::Mat loadPLYSimple(const char* fileName, int numVertices, int withNormals);
-		void writePLY(cv::Mat PC, const char* FileName);
+cv::Mat loadPLYSimple(const char* fileName, int numVertices, int withNormals);
+void writePLY(cv::Mat PC, const char* FileName);
 
-		cv::Mat samplePCUniform(cv::Mat PC, int sampleStep);
-		cv::Mat samplePCUniformInd(cv::Mat PC, int sampleStep, std::vector<int>& indices);
-		cv::Mat samplePCByQuantization(cv::Mat pc, float xrange[2], float yrange[2], float zrange[2], float sample_step_relative, int weightByCenter=0);
+cv::Mat samplePCUniform(cv::Mat PC, int sampleStep);
+cv::Mat samplePCUniformInd(cv::Mat PC, int sampleStep, std::vector<int>& indices);
+cv::Mat samplePCByQuantization(cv::Mat pc, float xrange[2], float yrange[2], float zrange[2], float sample_step_relative, int weightByCenter=0);
 
-		void computeBboxStd(cv::Mat pc, float xRange[2], float yRange[2], float zRange[2]);
+void computeBboxStd(cv::Mat pc, float xRange[2], float yRange[2], float zRange[2]);
 
-		void* indexPCFlann(cv::Mat pc);
-		void destroyFlann(void* flannIndex);
-		void queryPCFlann(void* flannIndex, cv::Mat PC, cv::Mat& Indices, cv::Mat& Distances);
+void* indexPCFlann(cv::Mat pc);
+void destroyFlann(void* flannIndex);
+void queryPCFlann(void* flannIndex, cv::Mat PC, cv::Mat& Indices, cv::Mat& Distances);
 
-		cv::Mat normalize_pc(cv::Mat pc, float scale);
-		cv::Mat normalizePCCoeff(cv::Mat pc, float scale, float* Cx, float* Cy, float* Cz, float* MinVal, float* MaxVal);
-		cv::Mat transPCCoeff(cv::Mat pc, float scale, float Cx, float Cy, float Cz, float MinVal, float MaxVal);
-		cv::Mat transformPCPose(cv::Mat pc, double Pose[16]);
+cv::Mat normalize_pc(cv::Mat pc, float scale);
+cv::Mat normalizePCCoeff(cv::Mat pc, float scale, float* Cx, float* Cy, float* Cz, float* MinVal, float* MaxVal);
+cv::Mat transPCCoeff(cv::Mat pc, float scale, float Cx, float Cy, float Cz, float MinVal, float MaxVal);
+cv::Mat transformPCPose(cv::Mat pc, double Pose[16]);
 
-		void getRandomPose(double Pose[16]);
-		cv::Mat addNoisePC(cv::Mat pc, double scale);
+void getRandomPose(double Pose[16]);
+cv::Mat addNoisePC(cv::Mat pc, double scale);
 
-		int computeNormalsPC3d(const cv::Mat PC, cv::Mat& PCNormals, const int NumNeighbors, const bool FlipViewpoint, const double viewpoint[3]);
-	}
+/**
+ *  \brief Compute the normals of an arbitrary point cloud
+ *
+ *  \param [in] PC Input point cloud to compute the normals for.
+ *  \param [in] PCNormals Output point cloud
+ *  \param [in] NumNeighbors Number of neighbors to take into account in a local region
+ *  \param [in] FlipViewpoint Should normals be flipped to a viewing direction?
+ *  \return Returns 0 on success
+ *
+ *  \details computeNormalsPC3d uses a plane fitting approach to smoothly compute
+ *  local normals. Normals are obtained through the eigenvector of the covariance
+ *  matrix, corresponding to the smallest eigen value.
+ *  If PCNormals is provided to be an Nx6 matrix, then no new allocation
+ *  is made, instead the existing memory is overwritten.
+ */
+int computeNormalsPC3d(const cv::Mat PC, cv::Mat& PCNormals, const int NumNeighbors, const bool FlipViewpoint, const double viewpoint[3]);
 }
+}
+
 #endif
