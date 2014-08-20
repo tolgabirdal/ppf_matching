@@ -341,7 +341,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\main_cv.cpp"
+				RelativePath=".\main_cv_simple.cpp"
 				>
 			</File>
 			<File

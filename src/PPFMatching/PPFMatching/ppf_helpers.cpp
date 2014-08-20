@@ -39,13 +39,13 @@
 // Author: Tolga Birdal
 
 #include "precomp.hpp"
+#include <opencv2/flann/flann.hpp>
 #include "ppf_helpers.hpp"
 #include "c_utils.hpp"
 #include <time.h>
 #include <fstream>
 #include <vector>
 #include <iostream>
-#include "flann/flann.h"
 
 #if defined (T_OPENMP)
 #include <omp.h>
@@ -53,7 +53,7 @@
 
 using namespace std;
 using namespace cv;
-
+/*
 #define FLANN_ALGORITHM_KD FLANN_INDEX_KDTREE_SINGLE
 #define FLANN_CHECKS FLANN_CHECKS_UNLIMITED
 #define FLANN_NUM_TREES 8
@@ -61,21 +61,21 @@ using namespace cv;
 #define FLANN_NUM_BRANCHINGS 32 // not used
 #define FLANN_TARGET_PRECISION -1
 #define FLANN_MAX_LEAF_SIZE 12
+*/
 
 namespace cv
 {
 namespace ppf_match_3d
 {
 
-Mat loadPLYSimple(const char* fileName, int numVertices, int withNormals)
+typedef cv::flann::L2<float> Distance_32F;
+typedef cv::flann::GenericIndex< Distance_32F > FlannIndex;
+
+Mat loadPLYSimple(const char* fileName, int withNormals)
 {
     Mat cloud;
+	int numVertices;
     
-    if (withNormals)
-        cloud=Mat(numVertices, 6, CV_32FC1);
-    else
-        cloud=Mat(numVertices, 3, CV_32FC1);
-        
     ifstream ifs(fileName);
     
     if (!ifs.is_open())
@@ -87,13 +87,19 @@ Mat loadPLYSimple(const char* fileName, int numVertices, int withNormals)
     string str;
     while (str.substr(0, 10) !="end_header")
     {
-        if ( str.substr(0, 14) == "element vertex" )
+		string entry = str.substr(0, 14);
+        if (entry == "element vertex")
         {
-        
+			numVertices = atoi(str.substr(15, str.size()-15).c_str());
         }
         getline(ifs, str);
     }
     
+	if (withNormals)
+        cloud=Mat(numVertices, 6, CV_32FC1);
+    else
+        cloud=Mat(numVertices, 3, CV_32FC1);
+
     float dummy =  0;
     for (int i = 0; i < numVertices; i++)
     {
@@ -207,122 +213,24 @@ Mat samplePCUniformInd(Mat PC, int sampleStep, vector<int> &indices)
 
 void* indexPCFlann(Mat pc)
 {
-    FLANNParameters p;
-    FLANN_INDEX flannIndex;
-    float speedup=0;
-    int i;
-    float* dataset;
-    bool isCont = pc.isContinuous();
-    
-    p.log_level = FLANN_LOG_NONE;
-    //p.log_destination = NULL;
-    p.algorithm = FLANN_ALGORITHM_KD;
-    p.checks = FLANN_CHECKS;
-    p.trees = FLANN_NUM_TREES;
-    p.branching = FLANN_NUM_BRANCHINGS;
-    p.iterations = FLANN_NUM_ITERATIONS;
-    p.target_precision = FLANN_TARGET_PRECISION;
-    p.leaf_max_size = FLANN_MAX_LEAF_SIZE;
-    p.eps = 0;
-    
-    flann_set_distance_type(flann::FLANN_DIST_EUCLIDEAN, 0);
-    
-#if defined (T_OPENMP)
-    p.cores = omp_get_num_threads();
-#else
-    p.cores = 1;
-#endif
-    
-    if (isCont && pc.rows==3)
-    {
-        dataset=(float*)pc.data;
-    }
-    else
-    {
-        dataset = new float[pc.rows*3];
-        float* temp=dataset;
-        for (i=0; i<pc.rows; i++)
-        {
-            const float* src = (float*)(&pc.data[i*pc.step]);
-            float* dst = (float*)(&dataset[i*3]);
-            
-            dst[0] = src[0];
-            dst[1] = src[1];
-            dst[2] = src[2];
-        }
-    }
-    
-    flannIndex = flann_build_index(dataset, pc.rows, 3, &speedup, &p);
-    
-    if (!isCont)
-        delete[] dataset;
-        
-    return (void*)flannIndex;
+	Mat dest_32f;
+	pc.colRange(0,3).copyTo(dest_32f);
+	return new FlannIndex(dest_32f, cvflann::KDTreeSingleIndexParams(8));
 }
 
 void destroyFlann(void* flannIndex)
 {
-    FLANNParameters p;
-    p.log_level = FLANN_LOG_NONE;
-    p.algorithm = FLANN_ALGORITHM_KD;
-    p.checks = FLANN_CHECKS;
-    p.trees = FLANN_NUM_TREES;
-    p.branching = FLANN_NUM_BRANCHINGS;
-    p.iterations = FLANN_NUM_ITERATIONS;
-    p.target_precision = FLANN_TARGET_PRECISION;
-    p.leaf_max_size = FLANN_MAX_LEAF_SIZE;
-    p.eps = 0;
-    
-    flann_free_index(flannIndex, &p);
+	FlannIndex* flannData = (FlannIndex*)flannIndex;
+	delete flannData;
 }
 
 // For speed purposes this function assumes that PC, Indices and Distances are created with continuous structures
-void queryPCFlann(void* flannIndex, Mat PC, Mat& Indices, Mat& Distances)
+void queryPCFlann(void* flannIndex, cv::Mat& pc, cv::Mat& indices, cv::Mat& distances)
 {
-    FLANNParameters p;
-    float speedup=0;
-    int i;
-    
-    const int numNeighbors = Indices.cols;
-    
-    p.log_level = FLANN_LOG_NONE;
-    //p.log_destination = NULL;
-    p.algorithm = FLANN_ALGORITHM_KD;
-    p.checks = FLANN_CHECKS;
-    p.trees = FLANN_NUM_TREES;
-    p.branching = FLANN_NUM_BRANCHINGS;
-    p.iterations = FLANN_NUM_ITERATIONS;
-    p.target_precision = FLANN_TARGET_PRECISION;
-    p.leaf_max_size = FLANN_MAX_LEAF_SIZE;
-    p.cores=1;
-    p.eps = 0;
-#if defined (T_OPENMP)
-    p.cores=8;
-    omp_set_num_threads(8);
-#endif
-    
-    float* dataset;
-    if (PC.isContinuous() && PC.rows==3)
-    {
-        dataset = (float*)PC.data;
-    }
-    else
-    {
-        dataset = new float[PC.rows*3];
-        for (i=0; i<PC.rows; i++)
-        {
-            const float* src = (float*)(&PC.data[i*PC.step]);
-            float* dst = (float*)(&dataset[i*3]);
-            dst[0] = src[0];
-            dst[1] = src[1];
-            dst[2] = src[2];
-        }
-    }
-    
-    flann_find_nearest_neighbors_index_float(flannIndex, dataset, PC.rows, (int*)Indices.data, (float*)Distances.data, numNeighbors, &p);
-    
-    if (PC.isContinuous() && PC.rows==3)
-        delete[] dataset;
+	FlannIndex* flann_index = (FlannIndex*)flannIndex;
+	Mat obj_32f; 
+	pc.colRange(0,3).copyTo(obj_32f);
+	flann_index->knnSearch(obj_32f, indices, distances, 1, cvflann::SearchParams(32) ); 
 }
 
 // uses a volume instead of an octree

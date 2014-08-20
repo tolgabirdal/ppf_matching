@@ -38,100 +38,87 @@
 //
 // Author: Tolga Birdal
 
-#include "tmesh.h"
 #include "ppf_match_3d.hpp"
+#include <iostream>
 #include "icp.hpp"
-#include "visualize_win.h"
 
 using namespace std;
 using namespace cv;
 using namespace ppf_match_3d;
 
-int main()
+static void help(std::string errorMessage)
 {
-    int numVert ;
+    std::cout<<"Program init error : "<<errorMessage<<std::endl;
+    std::cout<<"\nUsage : ppf_matching [input model file] [input scene file]"<<std::endl;    
+    std::cout<<"\nPlease start again with new parameters"<<std::endl;    
+}
+
+int main(int argc, char** argv)
+{
+    // welcome message    
+    std::cout<< "****************************************************"<<std::endl;    
+    std::cout<< "* Surface Matching demonstration : demonstrates the use of surface matching"
+             " using point pair features."<<std::endl;
+    std::cout<< "* The sample loads a model and a scene, where the model lies in a different"
+             " pose than the training."<<std::endl;
+    std::cout<< "* The sample loads a model and a scene, where the model lies in a different"
+             " pose than the training. It then "<<std::endl;
+    std::cout<< "****************************************************"<<std::endl;    
     
-    //const char* fn = "../../../data/kinect/model/Frog_ascii2.ply";
-    //const char* fn = "../../../data/SpaceTime/Scena1/scene1-model1_0_ascii.ply";
-    const char* fn = "data/parasaurolophus_6700.ply";
+    if (argc < 3)    
+    {    
+        help("Not enough input arguments");        
+        exit(1);        
+    }
     
-    // Filenames for outputing a transformed mesh (Generally for visualization in Meshlab and etc.)
-    const char* outputResultFile = "data/out/PPFICPOutput.ply";
-    const char* scenePCFile = "data/out/PPFICPScene.ply";
+    string modelFileName = (string)argv[1];
+    string sceneFileName = (string)argv[2];
     
-    // Read the model as a mesh
-    TMesh* mesh = 0;
-    read_mesh_ply(&mesh, fn);
-    Mat pc = Mat(mesh->NumVertices, 6, CV_32F);
-    get_mesh_vertices(mesh, pc.data, pc.step, 1, 0);
+    Mat pc = loadPLYSimple(modelFileName.c_str(), 1);
     
     // Now train the model
     printf("Training...");
     int64 tick1 = cv::getTickCount();
-    ppf_match_3d::PPF3DDetector detector(0.03, 0.03);
+    ppf_match_3d::PPF3DDetector detector(0.03, 0.05);
     detector.trainModel(pc);
     int64 tick2 = cv::getTickCount();
-    printf("\nTraining complete in %f ms. Loading model...", (double)(tick2-tick1)/ cv::getTickFrequency());
+    printf("\nTraining complete in %f ms.\nLoading model...", (double)(tick2-tick1)/ cv::getTickFrequency());
     
     // Read the scene
-    
-    //numVert = 264310;
-    //fn = "../../../data/kinect/scene/frog_scene_5_ascii.ply";
-    //numVert = 131834;
-    //fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
-    numVert = 114373;
-    fn = "data/rs1_normals.ply";
-    Mat pcTest = loadPLYSimple(fn, numVert, 1);
-    printf("\nStarting matching...");
+    Mat pcTest = loadPLYSimple(sceneFileName.c_str(), 1);
     
     // Match the model to the scene and get the pose
-    tick1 = cv::getTickCount();
+    printf("\nStarting matching...");
     vector < Pose3D* > results;
+    tick1 = cv::getTickCount();
     detector.match(pcTest, results, 1.0/10.0, 0.05);
-    //t_match_pc_ppf(pcTest, 15, 5, 0.03, ppfModel, results);
     tick2 = cv::getTickCount();
-    printf("\nPPF Elapsed Time %f sec\n", (double)(tick2-tick1)/ cv::getTickFrequency());
-    
-    // Create an instance of ICP
-    ICP icp(200, 0.001f, 2.5f, 8);
-    
-    int64 t1 = cv::getTickCount();
-    float residualOutput = 0;
+    printf("\nPPF Elapsed Time %f sec", (double)(tick2-tick1)/ cv::getTickFrequency());
     
     // Get only first N results
-    int N=5;
+    int N = 2;
     vector<Pose3D*>::const_iterator first = results.begin();
     vector<Pose3D*>::const_iterator last = results.begin() + N;
     vector<Pose3D*> resultsSub(first, last);
     
+    // Create an instance of ICP
+    ICP icp(200, 0.001f, 2.5f, 8);
+    float residualOutput = 0;
+    int64 t1 = cv::getTickCount();
+    
     // Register for all selected poses
+    printf("\nPerforming ICP on %d poses...", N);
     icp.registerModelToScene(pc, pcTest, resultsSub);
     int64 t2 = cv::getTickCount();
     
-    printf("Elapsed Time: %f\n\n", (double)(t2-t1)/cv::getTickFrequency());
+    printf("\nElapsed Time on ICP: %f\nEstimated Poses:\n", (double)(t2-t1)/cv::getTickFrequency());
     
-    printf("Estimated Poses:\n");
     // debug first five poses
     for (size_t i=0; i<resultsSub.size(); i++)
     {
-        Pose3D* pose = resultsSub[i];
-        
+        Pose3D* pose = resultsSub[i];        
         printf("Pose Result %d:\n", i);
         pose->printPose();
-        
-        Mat pct = transformPCPose(pc, pose->Pose);
-        
-        // write the mesh if desired
-        //TMesh* MeshTr = transform_mesh_new(mesh, pose->Pose);
-        //writePLY(pct, outputResultFile);
-        //t_write_mesh_ply(MeshTr, outputResultFile);
-        //writePLY(pcTest, scenePCFile);
-        //destroy_mesh(&MeshTr);
-        
-        // Visualize registration
-#if defined (_MSC_VER)
-        visualize_registration(pcTest, pct, "Registration");
-#endif
     }
     
     return 0;

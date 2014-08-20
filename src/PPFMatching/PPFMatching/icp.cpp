@@ -42,6 +42,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/flann/flann.hpp>
 #include <math.h>
 #include "ppf_helpers.hpp"
 //#include "c_utils.hpp"
@@ -385,8 +386,8 @@ int ICP::registerModelToScene(const Mat& srcPC, const Mat& dstPC, double& Residu
         float* distances = new float[numElSrc];
         int* indices = new int[numElSrc];
         
-        Mat Indices(2, sizesResult, CV_32S, indices, 0);
-        Mat Distances(2, sizesResult, CV_32F, distances, 0);
+        Mat Indices(1, sizesResult, CV_32S, indices);
+        Mat Distances(1, sizesResult, CV_32F, distances);
         
         // use robust weighting for outlier treatment
         int* indicesModel = new int[numElSrc];

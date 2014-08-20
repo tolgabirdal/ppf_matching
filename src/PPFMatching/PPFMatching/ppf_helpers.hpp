@@ -48,7 +48,7 @@ namespace cv
 namespace ppf_match_3d
 {
 
-cv::Mat loadPLYSimple(const char* fileName, int numVertices, int withNormals);
+cv::Mat loadPLYSimple(const char* fileName, int withNormals);
 void writePLY(cv::Mat PC, const char* FileName);
 
 cv::Mat samplePCUniform(cv::Mat PC, int sampleStep);
@@ -59,7 +59,7 @@ void computeBboxStd(cv::Mat pc, float xRange[2], float yRange[2], float zRange[2
 
 void* indexPCFlann(cv::Mat pc);
 void destroyFlann(void* flannIndex);
-void queryPCFlann(void* flannIndex, cv::Mat PC, cv::Mat& Indices, cv::Mat& Distances);
+void queryPCFlann(void* flannIndex, cv::Mat& PC, cv::Mat& Indices, cv::Mat& Distances);
 
 cv::Mat normalize_pc(cv::Mat pc, float scale);
 cv::Mat normalizePCCoeff(cv::Mat pc, float scale, float* Cx, float* Cy, float* Cz, float* MinVal, float* MaxVal);
@@ -84,7 +84,7 @@ cv::Mat addNoisePC(cv::Mat pc, double scale);
  *  If PCNormals is provided to be an Nx6 matrix, then no new allocation
  *  is made, instead the existing memory is overwritten.
  */
-int computeNormalsPC3d(const cv::Mat PC, cv::Mat& PCNormals, const int NumNeighbors, const bool FlipViewpoint, const double viewpoint[3]);
+CV_EXPORTS int computeNormalsPC3d(const cv::Mat PC, cv::Mat& PCNormals, const int NumNeighbors, const bool FlipViewpoint, const double viewpoint[3]);
 }
 }
 
