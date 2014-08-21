@@ -522,7 +522,7 @@ void PPF3DDetector::match(const Mat& pc, vector < Pose3D* >& results, const doub
     float dy = yRange[1] - yRange[0];
     float dz = zRange[1] - zRange[0];
     float diameter = sqrt ( dx * dx + dy * dy + dz * dz );
-    float distanceSampleStep = diameter * RelativeSceneDistance;
+    float distanceSampleStep = diameter * (float)RelativeSceneDistance;
     Mat sampled = samplePCByQuantization(pc, xRange, yRange, zRange, RelativeSceneDistance,1);
     
     // allocate the accumulator : Moved this to the inside of the loop

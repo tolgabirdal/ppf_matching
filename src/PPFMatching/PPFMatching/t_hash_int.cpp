@@ -333,13 +333,14 @@ hashtable_int *hashtableRead(FILE* f)
     size_t hashMagic=0;
     size_t n=0;
     hashtable_int *hashtbl;
-    
-    fread(&hashMagic, sizeof(size_t),1, f);
-    if (hashMagic==T_HASH_MAGIC)
+	size_t status ; 
+
+    status = fread(&hashMagic, sizeof(size_t),1, f);
+    if (status && hashMagic==T_HASH_MAGIC)
     {
         size_t i, dataSize;
-        fread(&n, sizeof(size_t),1, f);
-        fread(&dataSize, sizeof(size_t),1, f);
+        status = fread(&n, sizeof(size_t),1, f);
+        status = fread(&dataSize, sizeof(size_t),1, f);
         
         hashtbl=hashtableCreate(n, hash);
         
@@ -347,23 +348,23 @@ hashtable_int *hashtableRead(FILE* f)
         {
             size_t j=0;
             struct hashnode_i* node;
-            fread(&n, sizeof(size_t),1, f);
+            status = fread(&n, sizeof(size_t),1, f);
             
             for (j=0; j<n; j++)
             {
                 int key=0;
                 void* data=0;
-                fread(&key, sizeof(KeyType), 1, f);
+                status = fread(&key, sizeof(KeyType), 1, f);
                 
                 if (dataSize>sizeof(void*))
                 {
                     data=malloc(dataSize);
                     if (!data)
                         return NULL;
-                    fread(data, dataSize, 1, f);
+                    status = fread(data, dataSize, 1, f);
                 }
                 else
-                    fread(&data, dataSize, 1, f);
+                    status = fread(&data, dataSize, 1, f);
                     
                 hashtableInsert(hashtbl, key, data);
                 //free(key);

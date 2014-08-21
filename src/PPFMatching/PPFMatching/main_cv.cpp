@@ -81,7 +81,7 @@ int main()
     //fn = "../../../data/SpaceTime/Scena1/scene1-scene1_0_ascii.ply";
     numVert = 114373;
     fn = "data/rs1_normals.ply";
-    Mat pcTest = loadPLYSimple(fn, numVert, 1);
+    Mat pcTest = loadPLYSimple(fn, 1);
     printf("\nStarting matching...");
     
     // Match the model to the scene and get the pose
